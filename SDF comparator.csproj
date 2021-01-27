@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{59770E3F-0ABA-4442-B1B2-AF84CC61A46A}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>SDF_creation_test</RootNamespace>
-    <AssemblyName>SDF creation test</AssemblyName>
+    <RootNamespace>SDF_comparator</RootNamespace>
+    <AssemblyName>SDF comparator</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -46,7 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
+    <Compile Include="SDF_comparator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
