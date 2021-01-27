@@ -6,10 +6,11 @@ using System.IO;
 using System.Data.SqlServerCe;
 using System.Diagnostics;
 
-namespace SDF_creation_test {
-    class Program {
+namespace SDF_comparator {
+    class SDF_comparator {
+        const string VERSION_STR = "0.1";
         private static SqlCeConnection sqlce_from_filepath(string filepath)
-        {
+        { 
             return new SqlCeConnection("Data Source = " + filepath + ";");
         }
         
