@@ -110,6 +110,8 @@ namespace SDF_comparator {
                 conn.Close();
             }
 
+            //TODO: partial matching here
+
             write_line("Removed:");
             foreach (var row_pair in row_dicts[0])
             {
