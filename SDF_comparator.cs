@@ -92,7 +92,8 @@ namespace SDF_comparator {
             }
             return dest_rows;
         }
-        private static void print_diffs(List<RowChange> changes) {
+        private static void print_diffs(List<RowChange> changes, string[] filepaths) {
+            write_line($"--- {filepaths[0]}\n+++ {filepaths[1]}\n");
             foreach (var change in changes) {
                 string s;
                 if (change.Orig is null) {
@@ -104,9 +105,9 @@ namespace SDF_comparator {
                     int[] cols_pos = new int[change.Orig.Length];
 
                     int col_idx = 0;
-                    s = "==  |";
-                    string del_s = " |-  ";
-                    string add_s = " |+  ";
+                    s = "   | ";
+                    string del_s = " -  ";
+                    string add_s = " +  ";
                     string prefix = "";
                     var col_idxs = new List<int>(change.Diffs);
                     col_idxs.Add(change.Orig.Length);
@@ -129,7 +130,7 @@ namespace SDF_comparator {
                             prefix = " | ";
                         }
                     }
-                    s = $"{s}\n{del_s}\n{add_s}";
+                    s = $"{s}\n{del_s}\n{add_s}\n";
                 }
                 write_line(s);
             }
@@ -219,7 +220,7 @@ namespace SDF_comparator {
             }
 
             var changes = build_row_changes(row_dicts, dest_rows);
-            print_diffs(changes);
+            print_diffs(changes, filepaths);
         }
     }
 }
