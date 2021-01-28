@@ -16,7 +16,7 @@ namespace SDF_comparator {
 #if DEBUG
             Debug.WriteLine(s);
 #else
-                Console.WriteLine(s);
+            Console.WriteLine(s);
 #endif
         }
         private static SqlCeDataReader get_sqlce_reader(string filepath, out SqlCeConnection conn) {
