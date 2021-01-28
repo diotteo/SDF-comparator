@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace SDF_comparator {
     class SDF_comparator {
-        const string VERSION_STR = "0.2";
+        public const string VERSION_STR = "0.2";
         private static SqlCeConnection sqlce_from_filepath(string filepath) {
             return new SqlCeConnection("Data Source = " + filepath + ";");
         }
