@@ -109,9 +109,7 @@ namespace SDF_comparator {
                     string del_s = " -  ";
                     string add_s = " +  ";
                     string prefix = "";
-                    var col_idxs = new List<int>(change.Diffs);
-                    col_idxs.Add(change.Orig.Length);
-                    foreach (var idx in col_idxs) {
+                    foreach (var idx in change.Diffs.Union(new int[] { change.Orig.Length })) {
                         for (int i = col_idx; i < idx && i < change.Orig.Length; i++) {
                             cols_pos[i] = -1;
                             s += $"{prefix}{change.Orig[i]}";
