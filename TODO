@@ -1,6 +1,14 @@
+* Report on changes in:
+	* column name
+	* column count
+	* column order
+	* metadata
+
 * Argument parser
 	* Specify files on the command-line
+
 * Try harder (or even at all) to partially match rows
 	* This could get hairy at times e.g.: we could have 1-col changes potential matches for a single row and have to decide which to match. The best match being that which maximizes the remaining row's partial match col-count. As a first pass, just pick the first one and don't worry about pathological cases
 		* Read some more about diff's algorithm and its errors in such cases. Maybe we don't need to get too sophisticated here
+
 * Add LICENSE
