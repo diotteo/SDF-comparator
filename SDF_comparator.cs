@@ -100,7 +100,36 @@ namespace SDF_comparator {
                 } else if (change.Dst is null) {
                     s = $"- {change.Orig}";
                 } else {
-                    s = $"partial match unimplemented";
+                    //TODO: handle differing column schemes (that'll be interesting)
+                    int[] cols_pos = new int[change.Orig.Length];
+
+                    int col_idx = 0;
+                    s = "==  |";
+                    string del_s = " |-  ";
+                    string add_s = " |+  ";
+                    string prefix = "";
+                    var col_idxs = new List<int>(change.Diffs);
+                    col_idxs.Add(change.Orig.Length);
+                    foreach (var idx in col_idxs) {
+                        for (int i = col_idx; i < idx && i < change.Orig.Length; i++) {
+                            cols_pos[i] = -1;
+                            s += $"{prefix}{change.Orig[i]}";
+                            prefix = " | ";
+                        }
+                        col_idx = idx+1;
+                        if (idx < change.Orig.Length) {
+                            cols_pos[idx] = s.Length;
+                            var orig_s = change.Orig[idx].ToString();
+                            var dst_s = change.Dst[idx].ToString();
+
+                            s += prefix;
+                            del_s = del_s.PadRight(s.Length, ' ') + orig_s;
+                            add_s = add_s.PadRight(s.Length, ' ') + dst_s;
+                            s = s.PadRight(s.Length + Math.Max(orig_s.Length, dst_s.Length), ' ');
+                            prefix = " | ";
+                        }
+                    }
+                    s = $"{s}\n{del_s}\n{add_s}";
                 }
                 write_line(s);
             }
@@ -108,12 +137,60 @@ namespace SDF_comparator {
         private static List<RowChange> build_row_changes(List<Dictionary<object, List<Row>>> row_dicts, List<Row> dest_rows) {
             var changes = new List<RowChange>();
 
+            var pot_matches = new HashSet<Row>();
+            var unmatched_dst_rows = new List<Row>();
+            foreach (var dst_row in dest_rows) {
+                pot_matches.Clear();
+                for (int i = 0; i < row_dicts.Count; i++) {
+                    var row_dict = row_dicts[i];
+                    if (row_dict.TryGetValue(dst_row[i], out List<Row> idx_rows)) {
+                        pot_matches.UnionWith(idx_rows);
+                    }
+                }
+
+                Row best_match = null;
+                List<int> best_match_idxs = null;
+                var col_matches = new List<int>();
+                foreach (var pot_match in pot_matches) {
+                    col_matches.Clear();
+                    for (int i = 0; i < pot_match.Length; i++) {
+                        if (dst_row[i].Equals(pot_match[i])) {
+                            col_matches.Add(i);
+                        }
+                    }
+                    if (col_matches.Count > 0
+                            && (best_match_idxs is null || best_match_idxs.Count < col_matches.Count)) {
+                        best_match_idxs = new List<int>(col_matches);
+                        best_match = pot_match;
+                    }
+                }
+                if (best_match is null) {
+                    unmatched_dst_rows.Add(dst_row);
+                } else {
+                    var diff_idxs = new List<int>();
+
+                    int start_idx = 0;
+                    foreach (var match_idx in best_match_idxs.Union(new int[] { best_match_idxs.Count })) {
+                        for (int i = start_idx; i < match_idx; i++) {
+                            diff_idxs.Add(i);
+                        }
+                        start_idx = match_idx + 1;
+                    }
+
+                    changes.Add(new RowChange(best_match, dst_row, diff_idxs));
+                    for (int i = 0; i < row_dicts.Count; i++) {
+                        //use best_match[i] instead of dst_row[i] since we're doing partial matches, so the match is indexed elsewhere in some columns
+                        row_dicts[i][best_match[i]].Remove(best_match);
+                    }
+                }
+            }
+
             foreach (var row_pair in row_dicts[0]) {
                 foreach (var row in row_pair.Value) {
                     changes.Add(new RowChange(row, null));
                 }
             }
-            foreach (var row in dest_rows) {
+            foreach (var row in unmatched_dst_rows) {
                 changes.Add(new RowChange(null, row));
             }
             return changes;
