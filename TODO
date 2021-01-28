@@ -2,6 +2,7 @@
 
 * Argument parser
 	* Specify files on the command-line
+	* Add --color argument (default to auto)
 
 * Align column separators of all printed rows?
 
