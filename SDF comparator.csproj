@@ -46,6 +46,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Row.cs" />
+    <Compile Include="RowChange.cs" />
     <Compile Include="SDF_comparator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
