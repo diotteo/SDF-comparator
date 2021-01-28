@@ -96,6 +96,8 @@ namespace SDF_comparator {
             write_line($"--- {filepaths[0]}\n+++ {filepaths[1]}\n");
             foreach (var change in changes) {
                 string s;
+                string del_s = null;
+                string add_s = null;
                 if (change.Orig is null) {
                     s = $"+ {change.Dst}";
                 } else if (change.Dst is null) {
@@ -106,8 +108,8 @@ namespace SDF_comparator {
 
                     int col_idx = 0;
                     s = "   | ";
-                    string del_s = " -  ";
-                    string add_s = " +  ";
+                    del_s = " -  ";
+                    add_s = " +  ";
                     string prefix = "";
                     foreach (var idx in change.Diffs.Union(new int[] { change.Orig.Length })) {
                         for (int i = col_idx; i < idx && i < change.Orig.Length; i++) {
@@ -128,9 +130,18 @@ namespace SDF_comparator {
                             prefix = " | ";
                         }
                     }
-                    s = $"{s}\n{del_s}\n{add_s}\n";
                 }
                 write_line(s);
+                if (del_s != null) {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    write_line(del_s);
+                    Console.ResetColor();
+                }
+                if (add_s != null) {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    write_line(add_s);
+                    Console.ResetColor();
+                }
             }
         }
         private static List<RowChange> build_row_changes(List<Dictionary<object, List<Row>>> row_dicts, List<Row> dest_rows) {
