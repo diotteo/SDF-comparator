@@ -1,10 +1,13 @@
+* Add LICENSE
+
+* Argument parser
+	* Specify files on the command-line
+
+* Align column separators of all printed rows?
+
 * Report on changes in:
 	* column name
 	* column count
 	* column order
 	* metadata
 
-* Argument parser
-	* Specify files on the command-line
-
-* Add LICENSE
