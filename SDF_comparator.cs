@@ -127,7 +127,6 @@ namespace SDF_comparator {
             var pot_matches = new HashSet<Row>();
             var unmatched_dst_rows = new List<Row>();
 
-            Utils.WriteLine("\n  Rows:");
             foreach (var dst_row in dest_rows) {
                 pot_matches.Clear();
                 for (int i = 0; i < row_dicts.Count; i++) {
@@ -293,6 +292,14 @@ namespace SDF_comparator {
                 table_tup.parent.Dest.GetConnection().Close();
 
                 var changes = build_row_changes(row_dicts, dest_rows);
+                Utils.WriteLine("\n  Rows:");
+                var s = "  ";
+                var prefix = " |";
+                foreach (var col_tup in table_tup.col_tuples) {
+                    s += $"{prefix} {col_tup.Names[0]}";
+                }
+                s += " |";
+                Utils.WriteLine(s);
                 print_row_diffs(changes, filepaths);
             }
 
