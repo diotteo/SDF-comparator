@@ -239,7 +239,8 @@ namespace SDF_comparator {
             }
         }
         private static void print_help() {
-            string prgm = System.IO.Path.GetRelativePath(System.IO.Directory.GetCurrentDirectory(), System.Reflection.Assembly.GetExecutingAssembly().Location);
+            //string prgm = System.IO.Path.GetRelativePath(System.IO.Directory.GetCurrentDirectory(), System.Reflection.Assembly.GetExecutingAssembly().Location);
+            string prgm = System.Reflection.Assembly.GetExecutingAssembly().Location;
             Utils.WriteLine($"Usage: {prgm} {{path/to/orig.sdf}} {{path/to/dest.sdf}}");
         }
         static int Main(string[] args) {
