@@ -8,13 +8,6 @@ using System.Diagnostics;
 
 namespace SDF_comparator {
     class SDF_comparator {
-        private static void write_line(string s) {
-#if DEBUG
-            Debug.WriteLine(s);
-#else
-            Console.WriteLine(s);
-#endif
-        }
         private static List<Dictionary<object, List<Row>>> build_row_dicts(SqlCeDataReader rdr) {
             var row_dicts = new List<Dictionary<object, List<Row>>>();
             object[] raw_row = new object[rdr.FieldCount];
@@ -77,16 +70,17 @@ namespace SDF_comparator {
             }
             return dest_rows;
         }
-        private static void print_diffs(List<RowChange> changes, string[] filepaths) {
-            write_line($"--- {filepaths[0]}\n+++ {filepaths[1]}\n");
+        private static void print_row_diffs(List<RowChange> changes, string[] filepaths) {
             foreach (var change in changes) {
                 string s;
                 string del_s = null;
                 string add_s = null;
                 if (change.Orig is null) {
-                    s = $"+ {change.Dst}";
+                    s = null;
+                    add_s = $" + {change.Dst}";
                 } else if (change.Dst is null) {
-                    s = $"- {change.Orig}";
+                    s = null;
+                    del_s = $" - {change.Orig}";
                 } else {
                     //TODO: handle differing column schemes (that'll be interesting)
                     int[] cols_pos = new int[change.Orig.Length];
@@ -116,16 +110,14 @@ namespace SDF_comparator {
                         }
                     }
                 }
-                write_line(s);
+                if (s != null) {
+                    Utils.WriteLine(s);
+                }
                 if (del_s != null) {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    write_line(del_s);
-                    Console.ResetColor();
+                    Utils.WriteDiffLine(del_s, false);
                 }
                 if (add_s != null) {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    write_line(add_s);
-                    Console.ResetColor();
+                    Utils.WriteDiffLine(add_s, true);
                 }
             }
         }
@@ -134,6 +126,8 @@ namespace SDF_comparator {
 
             var pot_matches = new HashSet<Row>();
             var unmatched_dst_rows = new List<Row>();
+
+            Utils.WriteLine("\n  Rows:");
             foreach (var dst_row in dest_rows) {
                 pot_matches.Clear();
                 for (int i = 0; i < row_dicts.Count; i++) {
@@ -201,15 +195,20 @@ namespace SDF_comparator {
                 }
             }
 
-            foreach (var tup in new Tuple<SortedSet<string>, string>[] {
-                    new Tuple<SortedSet<string>, string>(added_tables, "added"),
-                    new Tuple<SortedSet<string>, string>(removed_tables, "removed") }) {
+            bool b_is_first = true;
+            foreach (var tup in new Tuple<SortedSet<string>, bool>[] {
+                    new Tuple<SortedSet<string>, bool>(added_tables, true),
+                    new Tuple<SortedSet<string>, bool>(removed_tables, false) }) {
                 var set = tup.Item1;
-                var change_str = tup.Item2;
+                var b_is_add = tup.Item2;
                 if (set.Count > 0) {
-                    Utils.WriteLine($"Tables {change_str}:");
                     foreach (var table_name in set) {
-                        Utils.WriteLine($"  {table_name}");
+                        if (b_is_first) {
+                            b_is_first = false;
+                            Utils.WriteLine($"Tables:");
+                        }
+                        var prefix = b_is_add ? "+ " : "- ";
+                        Utils.WriteDiffLine($"{prefix}{table_name}", b_is_add);
                     }
                 }
             }
@@ -225,15 +224,20 @@ namespace SDF_comparator {
                 }
             }
 
-            foreach (var tup in new Tuple<SortedSet<string>, string>[] {
-                        new Tuple<SortedSet<string>, string>(added_cols, "added"),
-                        new Tuple<SortedSet<string>, string>(removed_cols, "removed")}) {
+            bool b_is_first = true;
+            foreach (var tup in new Tuple<SortedSet<string>, bool>[] {
+                        new Tuple<SortedSet<string>, bool>(added_cols, true),
+                        new Tuple<SortedSet<string>, bool>(removed_cols, false)}) {
                 var set = tup.Item1;
-                var change_str = tup.Item2;
+                var b_is_add = tup.Item2;
                 if (set.Count > 0) {
-                    Utils.WriteLine($"Columns {change_str}:");
                     foreach (var col_name in set) {
-                        Utils.WriteLine($"  {col_name}");
+                        if (b_is_first) {
+                            b_is_first = false;
+                            Utils.WriteLine($"  Columns:");
+                        }
+                        var prefix = b_is_add ? "+   " : "-   ";
+                        Utils.WriteDiffLine($"{prefix}{col_name}", b_is_add);
                     }
                 }
             }
@@ -262,8 +266,10 @@ namespace SDF_comparator {
                     new CachedDatabase(filepaths[0]),
                     new CachedDatabase(filepaths[1]));
 
+            Utils.WriteLine($"--- {filepaths[0]}\n+++ {filepaths[1]}\n");
             print_table_diffs(db_tup);
             foreach (var table_tup in db_tup.table_tuples) {
+                Utils.WriteLine($"\n---- {table_tup.Names[0]}\n++++ {table_tup.Names[1]}");
                 print_col_diffs(table_tup);
 
                 /* A list of dictionaries each containing a collection of rows with matching column values
@@ -287,7 +293,7 @@ namespace SDF_comparator {
                 table_tup.parent.Dest.GetConnection().Close();
 
                 var changes = build_row_changes(row_dicts, dest_rows);
-                print_diffs(changes, filepaths);
+                print_row_diffs(changes, filepaths);
             }
 
             return 0;
