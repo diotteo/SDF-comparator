@@ -82,7 +82,6 @@ namespace SDF_comparator {
                     s = null;
                     del_s = $" - {change.Orig}";
                 } else {
-                    //TODO: handle differing column schemes (that'll be interesting)
                     int[] cols_pos = new int[change.Orig.Length];
 
                     int col_idx = 0;
@@ -109,6 +108,7 @@ namespace SDF_comparator {
                             prefix = " | ";
                         }
                     }
+                    s += " |";
                 }
                 if (s != null) {
                     Utils.WriteLine(s);
