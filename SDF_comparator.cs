@@ -207,7 +207,61 @@ namespace SDF_comparator {
         }
         static void Main(string[] args) {
             string[] filepaths = { "../../seeds1.sdf", "../../seeds2.sdf" };
+            //string[] filepaths = { "../../test tables/table diff 1.sdf", "../../test tables/table diff 2.sdf" };
+            //string[] filepaths = { "../../test tables/col diff 1.sdf", "../../test tables/col diff 2.sdf" };
 
+            var db_tup = new DatabaseTuple(
+                    new CachedDatabase(filepaths[0]),
+                    new CachedDatabase(filepaths[1]));
+
+            var added_tables = new SortedSet<string>();
+            var removed_tables = new SortedSet<string>();
+            foreach (var diff_table_tup in db_tup.diff_tables) {
+                if (diff_table_tup.Names[1] is null) {
+                    removed_tables.Add(diff_table_tup.Names[0]);
+                } else {
+                    added_tables.Add(diff_table_tup.Names[1]);
+                }
+            }
+
+            foreach (var tup in new Tuple<SortedSet<string>, string>[] {
+                    new Tuple<SortedSet<string>, string>(added_tables, "added"),
+                    new Tuple<SortedSet<string>, string>(removed_tables, "removed") }) {
+                var set = tup.Item1;
+                var change_str = tup.Item2;
+                if (set.Count > 0) {
+                    Utils.WriteLine($"Tables {change_str}:");
+                    foreach (var table_name in set) {
+                        Utils.WriteLine($"  {table_name}");
+                    }
+                }
+            }
+
+            foreach (var table_tup in db_tup.table_tuples) {
+                var added_cols = new SortedSet<string>();
+                var removed_cols = new SortedSet<string>();
+                foreach (var diff_col_tup in table_tup.diff_cols) {
+                    if (diff_col_tup.Names[1] is null) {
+                        removed_cols.Add(diff_col_tup.Names[0]);
+                    } else {
+                        added_cols.Add(diff_col_tup.Names[1]);
+                    }
+                }
+
+                foreach (var tup in new Tuple<SortedSet<string>, string>[] {
+                        new Tuple<SortedSet<string>, string>(added_cols, "added"),
+                        new Tuple<SortedSet<string>, string>(removed_cols, "removed")}) {
+                    var set = tup.Item1;
+                    var change_str = tup.Item2;
+                    if (set.Count > 0) {
+                        Utils.WriteLine($"Columns {change_str}:");
+                        foreach (var col_name in set) {
+                            Utils.WriteLine($"  {col_name}");
+                        }
+                    }
+                }
+            }
+#if false
             /* A list of dictionaries each containing a collection of rows with matching column values
              * row_dicts[1][col_val][3] means "get the 4th row whose 2nd column has a value of col_var"
              */
@@ -230,6 +284,7 @@ namespace SDF_comparator {
 
             var changes = build_row_changes(row_dicts, dest_rows);
             print_diffs(changes, filepaths);
+#endif
         }
     }
 }
