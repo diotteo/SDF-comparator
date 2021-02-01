@@ -238,10 +238,24 @@ namespace SDF_comparator {
                 }
             }
         }
-        static void Main(string[] args) {
-            string[] filepaths = { "../../seeds1.sdf", "../../seeds2.sdf" };
-            //string[] filepaths = { "../../test tables/table diff 1.sdf", "../../test tables/table diff 2.sdf" };
-            //string[] filepaths = { "../../test tables/col diff 1.sdf", "../../test tables/col diff 2.sdf" };
+        private static void print_help() {
+            string prgm = System.IO.Path.GetRelativePath(System.IO.Directory.GetCurrentDirectory(), System.Reflection.Assembly.GetExecutingAssembly().Location);
+            Utils.WriteLine($"Usage: {prgm} {{path/to/orig.sdf}} {{path/to/dest.sdf}}");
+        }
+        static int Main(string[] args) {
+            string[] filepaths = new string[2];
+
+            if (args.Length == 2) {
+                filepaths[0] = args[0];
+                filepaths[1] = args[1];
+            } else {
+                print_help();
+                return 1;
+            }
+
+            //filepaths = new string[] { "../../seeds1.sdf", "../../seeds2.sdf" };
+            //filepaths = new string[] { "../../test tables/table diff 1.sdf", "../../test tables/table diff 2.sdf" };
+            //filepaths = new string[] { "../../test tables/col diff 1.sdf", "../../test tables/col diff 2.sdf" };
 
             var db_tup = new DatabaseTuple(
                     new CachedDatabase(filepaths[0]),
@@ -274,6 +288,8 @@ namespace SDF_comparator {
                 var changes = build_row_changes(row_dicts, dest_rows);
                 print_diffs(changes, filepaths);
             }
+
+            return 0;
         }
 
         private static SqlCeDataReader get_reader_from_table_and_cols(CachedTable table, List<ColumnTuple> col_tuples) {

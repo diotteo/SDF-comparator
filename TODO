@@ -7,8 +7,9 @@
 * Align column separators of all printed rows?
 
 * Report on changes in:
-	* column name
-	* column count
-	* column order
 	* metadata
+	* Column types
+	* Column orders
 
+* Try to match tables and columns through renames
+	* This is hard, we'll need to guess from subdata
