@@ -8,7 +8,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>SDF_comparator</RootNamespace>
     <AssemblyName>SDF comparator</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
@@ -23,6 +23,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,6 +33,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -46,10 +48,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CachedColumn.cs" />
+    <Compile Include="CachedDatabase.cs" />
+    <Compile Include="CachedTable.cs" />
+    <Compile Include="DatabaseTuple.cs" />
     <Compile Include="Row.cs" />
     <Compile Include="RowChange.cs" />
+    <Compile Include="ColumnTuple.cs" />
     <Compile Include="SDF_comparator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TableTuple.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

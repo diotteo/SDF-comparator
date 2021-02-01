@@ -8,27 +8,12 @@ using System.Diagnostics;
 
 namespace SDF_comparator {
     class SDF_comparator {
-        public const string VERSION_STR = "0.2";
-        private static SqlCeConnection sqlce_from_filepath(string filepath) {
-            return new SqlCeConnection("Data Source = " + filepath + ";");
-        }
         private static void write_line(string s) {
 #if DEBUG
             Debug.WriteLine(s);
 #else
             Console.WriteLine(s);
 #endif
-        }
-        private static SqlCeDataReader get_sqlce_reader(string filepath, out SqlCeConnection conn) {
-            SqlCeDataReader rdr = null;
-            conn = sqlce_from_filepath(filepath);
-            conn.Open();
-
-            SqlCeCommand cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT * FROM SEEDS;";
-            rdr = cmd.ExecuteReader();
-
-            return rdr;
         }
         private static List<Dictionary<object, List<Row>>> build_row_dicts(SqlCeDataReader rdr) {
             var row_dicts = new List<Dictionary<object, List<Row>>>();
@@ -205,31 +190,106 @@ namespace SDF_comparator {
             }
             return changes;
         }
-        static void Main(string[] args) {
-            string[] filepaths = { "../../seeds1.sdf", "../../seeds2.sdf" };
-
-            /* A list of dictionaries each containing a collection of rows with matching column values
-             * row_dicts[1][col_val][3] means "get the 4th row whose 2nd column has a value of col_var"
-             */
-            List<Dictionary<object, List<Row>>> row_dicts = null;
-            List<Row> dest_rows = null;
-            SqlCeConnection conn = null;
-            try {
-                for (int i = 0; i < filepaths.Length; i++) {
-                    var rdr = get_sqlce_reader(filepaths[i], out conn);
-                    if (i == 0) {
-                        row_dicts = build_row_dicts(rdr);
-                    } else {
-                        dest_rows = prune_full_matches(rdr, row_dicts);
-                    }
-                    conn.Close();
+        static void print_table_diffs(DatabaseTuple db_tup) {
+            var added_tables = new SortedSet<string>();
+            var removed_tables = new SortedSet<string>();
+            foreach (var diff_table_tup in db_tup.diff_tables) {
+                if (diff_table_tup.Names[1] is null) {
+                    removed_tables.Add(diff_table_tup.Names[0]);
+                } else {
+                    added_tables.Add(diff_table_tup.Names[1]);
                 }
-            } finally {
-                conn.Close();
             }
 
-            var changes = build_row_changes(row_dicts, dest_rows);
-            print_diffs(changes, filepaths);
+            foreach (var tup in new Tuple<SortedSet<string>, string>[] {
+                    new Tuple<SortedSet<string>, string>(added_tables, "added"),
+                    new Tuple<SortedSet<string>, string>(removed_tables, "removed") }) {
+                var set = tup.Item1;
+                var change_str = tup.Item2;
+                if (set.Count > 0) {
+                    Utils.WriteLine($"Tables {change_str}:");
+                    foreach (var table_name in set) {
+                        Utils.WriteLine($"  {table_name}");
+                    }
+                }
+            }
+        }
+        private static void print_col_diffs(TableTuple table_tup) {
+            var added_cols = new SortedSet<string>();
+            var removed_cols = new SortedSet<string>();
+            foreach (var diff_col_tup in table_tup.diff_cols) {
+                if (diff_col_tup.Names[1] is null) {
+                    removed_cols.Add(diff_col_tup.Names[0]);
+                } else {
+                    added_cols.Add(diff_col_tup.Names[1]);
+                }
+            }
+
+            foreach (var tup in new Tuple<SortedSet<string>, string>[] {
+                        new Tuple<SortedSet<string>, string>(added_cols, "added"),
+                        new Tuple<SortedSet<string>, string>(removed_cols, "removed")}) {
+                var set = tup.Item1;
+                var change_str = tup.Item2;
+                if (set.Count > 0) {
+                    Utils.WriteLine($"Columns {change_str}:");
+                    foreach (var col_name in set) {
+                        Utils.WriteLine($"  {col_name}");
+                    }
+                }
+            }
+        }
+        static void Main(string[] args) {
+            string[] filepaths = { "../../seeds1.sdf", "../../seeds2.sdf" };
+            //string[] filepaths = { "../../test tables/table diff 1.sdf", "../../test tables/table diff 2.sdf" };
+            //string[] filepaths = { "../../test tables/col diff 1.sdf", "../../test tables/col diff 2.sdf" };
+
+            var db_tup = new DatabaseTuple(
+                    new CachedDatabase(filepaths[0]),
+                    new CachedDatabase(filepaths[1]));
+
+            print_table_diffs(db_tup);
+            foreach (var table_tup in db_tup.table_tuples) {
+                print_col_diffs(table_tup);
+
+                /* A list of dictionaries each containing a collection of rows with matching column values
+                 * row_dicts[1][col_val][3] means "get the 4th row whose 2nd column has a value of col_var"
+                 */
+                List<Dictionary<object, List<Row>>> row_dicts = null;
+                List<Row> dest_rows = null;
+
+                table_tup.parent.Orig.GetConnection().Open();
+                var orig_table_name = table_tup.Names[0];
+                var orig_table = table_tup.parent.Orig.tables[orig_table_name];
+                var rdr = get_reader_from_table_and_cols(orig_table, table_tup.col_tuples);
+                row_dicts = build_row_dicts(rdr);
+                table_tup.parent.Orig.GetConnection().Close();
+
+                table_tup.parent.Dest.GetConnection().Open();
+                var dest_table_name = table_tup.Names[1];
+                var dest_table = table_tup.parent.Dest.tables[dest_table_name];
+                rdr = get_reader_from_table_and_cols(dest_table, table_tup.col_tuples);
+                dest_rows = prune_full_matches(rdr, row_dicts);
+                table_tup.parent.Dest.GetConnection().Close();
+
+                var changes = build_row_changes(row_dicts, dest_rows);
+                print_diffs(changes, filepaths);
+            }
+        }
+
+        private static SqlCeDataReader get_reader_from_table_and_cols(CachedTable table, List<ColumnTuple> col_tuples) {
+            var conn = table.ParentDb.GetConnection();
+            SqlCeCommand cmd = conn.CreateCommand();
+            var s = "SELECT ";
+            var prefix = "";
+
+            //FIXME: should only use Names[0] for orig reader
+            foreach (var col in col_tuples) {
+                s += $"{prefix}[{col.Names[0]}]";
+                prefix = ", ";
+            }
+            s += $" FROM {table.Name};";
+            cmd.CommandText = s;
+            return cmd.ExecuteReader();
         }
     }
 }
