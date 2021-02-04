@@ -8,6 +8,7 @@ using System.Diagnostics;
 
 namespace SDF_comparator {
     class SDF_comparator {
+        private static List<string> header = new List<string>();
         private static List<Dictionary<object, List<Row>>> build_row_dicts(SqlCeDataReader rdr) {
             var row_dicts = new List<Dictionary<object, List<Row>>>();
             object[] raw_row = new object[rdr.FieldCount];
@@ -110,6 +111,7 @@ namespace SDF_comparator {
                     }
                     s += " |";
                 }
+                printWithHeader(null);
                 if (s != null) {
                     Utils.WriteLine(s);
                 }
@@ -204,7 +206,7 @@ namespace SDF_comparator {
                     foreach (var table_name in set) {
                         if (b_is_first) {
                             b_is_first = false;
-                            Utils.WriteLine($"Tables:");
+                            printWithHeader($"Tables:");
                         }
                         var prefix = b_is_add ? "+ " : "- ";
                         Utils.WriteDiffLine($"{prefix}{table_name}", b_is_add);
@@ -212,7 +214,7 @@ namespace SDF_comparator {
                 }
             }
         }
-        private static void print_col_diffs(TableTuple table_tup) {
+        private static bool print_col_diffs(TableTuple table_tup) {
             var added_cols = new SortedSet<string>();
             var removed_cols = new SortedSet<string>();
             foreach (var diff_col_tup in table_tup.diff_cols) {
@@ -233,18 +235,28 @@ namespace SDF_comparator {
                     foreach (var col_name in set) {
                         if (b_is_first) {
                             b_is_first = false;
-                            Utils.WriteLine($"  Columns:");
+                            printWithHeader($"  Columns:");
                         }
                         var prefix = b_is_add ? "+   " : "-   ";
                         Utils.WriteDiffLine($"{prefix}{col_name}", b_is_add);
                     }
                 }
             }
+            return true;
         }
         private static void print_help() {
             //string prgm = System.IO.Path.GetRelativePath(System.IO.Directory.GetCurrentDirectory(), System.Reflection.Assembly.GetExecutingAssembly().Location);
             string prgm = System.Reflection.Assembly.GetExecutingAssembly().Location;
             Utils.WriteLine($"Usage: {prgm} {{path/to/orig.sdf}} {{path/to/dest.sdf}}");
+        }
+        private static void printWithHeader(string s) {
+            foreach (var line in header) {
+                Utils.WriteLine(line);
+            }
+            header.Clear();
+            if (s != null) {
+                Utils.WriteLine(s);
+            }
         }
         static int Main(string[] args) {
             string[] filepaths = new string[2];
@@ -265,10 +277,10 @@ namespace SDF_comparator {
                     new CachedDatabase(filepaths[0]),
                     new CachedDatabase(filepaths[1]));
 
-            Utils.WriteLine($"--- {filepaths[0]}\n+++ {filepaths[1]}\n");
+            header.Add($"--- {filepaths[0]}\n+++ {filepaths[1]}\n");
             print_table_diffs(db_tup);
             foreach (var table_tup in db_tup.table_tuples) {
-                Utils.WriteLine($"\n---- {table_tup.Names[0]}\n++++ {table_tup.Names[1]}");
+                header.Add($"\n---- {table_tup.Names[0]}\n++++ {table_tup.Names[1]}");
                 print_col_diffs(table_tup);
 
                 /* A list of dictionaries each containing a collection of rows with matching column values
@@ -292,14 +304,14 @@ namespace SDF_comparator {
                 table_tup.parent.Dest.GetConnection().Close();
 
                 var changes = build_row_changes(row_dicts, dest_rows);
-                Utils.WriteLine("\n  Rows:");
+                header.Add("\n  Rows:");
                 var s = "  ";
                 var prefix = " |";
                 foreach (var col_tup in table_tup.col_tuples) {
                     s += $"{prefix} {col_tup.Names[0]}";
                 }
                 s += " |";
-                Utils.WriteLine(s);
+                header.Add(s);
                 print_row_diffs(changes, filepaths);
             }
 
