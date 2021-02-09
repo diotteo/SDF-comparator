@@ -271,10 +271,6 @@ namespace SDF_comparator {
                 return 1;
             }
 
-            //filepaths = new string[] { "../../seeds1.sdf", "../../seeds2.sdf" };
-            //filepaths = new string[] { "../../test tables/table diff 1.sdf", "../../test tables/table diff 2.sdf" };
-            //filepaths = new string[] { "../../test tables/col diff 1.sdf", "../../test tables/col diff 2.sdf" };
-
             var db_tup = new DatabaseTuple(
                     new CachedDatabase(filepaths[0]),
                     new CachedDatabase(filepaths[1]));
