@@ -175,9 +175,11 @@ namespace SDF_comparator {
                 }
             }
 
-            foreach (var row_pair in row_dicts[0]) {
-                foreach (var row in row_pair.Value) {
-                    changes.Add(new RowChange(row, null));
+            if (row_dicts.Count > 0) {
+                foreach (var row_pair in row_dicts[0]) {
+                    foreach (var row in row_pair.Value) {
+                        changes.Add(new RowChange(row, null));
+                    }
                 }
             }
             foreach (var row in unmatched_dst_rows) {
