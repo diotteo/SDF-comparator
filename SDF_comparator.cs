@@ -12,14 +12,18 @@ namespace SDF_comparator {
         private static List<Dictionary<object, List<Row>>> build_row_dicts(SqlCeDataReader rdr) {
             var row_dicts = new List<Dictionary<object, List<Row>>>();
             object[] raw_row = new object[rdr.FieldCount];
+
+            /* Create the empty dictionaries, even if there is no row in the table,
+             * just so we don't have to deal with that edge case elsewhere
+             */
+            for (int i = 0; i < rdr.FieldCount; i++) {
+                row_dicts.Add(new Dictionary<object, List<Row>>());
+            }
+
             while (rdr.Read()) {
                 rdr.GetValues(raw_row);
                 var cur_row = new Row(raw_row);
                 for (int j = 0; j < cur_row.Length; j++) {
-                    if (row_dicts.Count <= j) {
-                        row_dicts.Insert(j, new Dictionary<object, List<Row>>());
-                    }
-                    //row_dicts[j].TryGetValue()
                     if (!row_dicts[j].ContainsKey(cur_row[j])) {
                         row_dicts[j].Add(cur_row[j], new List<Row>());
                     }
@@ -175,13 +179,16 @@ namespace SDF_comparator {
                 }
             }
 
-            if (row_dicts.Count > 0) {
-                foreach (var row_pair in row_dicts[0]) {
-                    foreach (var row in row_pair.Value) {
-                        changes.Add(new RowChange(row, null));
-                    }
+            /* row_dicts is a list of {column_count} dictionaries of rows, indexed by their values for each column
+             * Here, we just want to add all rows that have at least one change to changes, so we just go through the first dictionary
+             * (because it doesn't matter which one we use).
+             */
+            foreach (var row_pair in row_dicts[0]) {
+                foreach (var row in row_pair.Value) {
+                    changes.Add(new RowChange(row, null));
                 }
             }
+
             foreach (var row in unmatched_dst_rows) {
                 changes.Add(new RowChange(null, row));
             }
@@ -290,6 +297,7 @@ namespace SDF_comparator {
                 table_tup.parent.Orig.GetConnection().Open();
                 var orig_table_name = table_tup.Names[0];
                 var orig_table = table_tup.parent.Orig.tables[orig_table_name];
+
                 var rdr = get_reader_from_table_and_cols(orig_table, table_tup.col_tuples);
                 row_dicts = build_row_dicts(rdr);
                 table_tup.parent.Orig.GetConnection().Close();
