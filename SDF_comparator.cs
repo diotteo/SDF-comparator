@@ -319,6 +319,9 @@ namespace SDF_comparator {
                 s += " |";
                 header.Add(s);
                 print_row_diffs(changes, filepaths);
+
+                //If the header still has data (we did not print anything), don't print the header
+                header.Clear();
             }
 
             return 0;
