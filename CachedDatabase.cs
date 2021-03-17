@@ -6,26 +6,28 @@ using System.Text;
 using System.Data.SqlServerCe;
 
 namespace SDF_comparator {
-    class CachedDatabase : IEnumerable {
+    //FIXME: Expose a full IDictionary interface rather than IEnumerable?
+    class CachedDatabase : IEnumerable<CachedTable> {
         public string Filepath { get; private set; }
-        private SqlCeConnection conn;
-        public Dictionary<string, CachedTable> tables;
+        public SqlCeConnection Connection { get; private set; }
+        private Dictionary<string, CachedTable> tables;
+
+        public CachedTable this[string table_name] => tables[table_name];
+
         public CachedDatabase(string filepath) {
             Filepath = filepath;
-            conn = new SqlCeConnection($"Data Source = {Filepath};");
+            Connection = new SqlCeConnection($"Data Source = {Filepath};");
             tables = new Dictionary<string, CachedTable>();
 
             cache_tables();
         }
-        public SqlCeConnection GetConnection() {
-            return conn;
-        }
+
         private void cache_tables() {
             try {
                 tables.Clear();
-                conn.Open();
+                Connection.Open();
 
-                SqlCeCommand cmd = conn.CreateCommand();
+                SqlCeCommand cmd = Connection.CreateCommand();
                 cmd.CommandText = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'TABLE';";
                 var rdr = cmd.ExecuteReader();
                 while (rdr.Read()) {
@@ -33,17 +35,24 @@ namespace SDF_comparator {
                     tables.Add(name, new CachedTable(this, name));
                 }
             } finally {
-                conn.Close();
+                Connection.Close();
             }
         }
-        public bool TryGetValue(string value, out CachedTable output) {
-            return tables.TryGetValue(value, out output);
+
+        public bool TryGetValue(string table_name, out CachedTable output) {
+            return tables.TryGetValue(table_name, out output);
         }
+
+        public bool ContainsKey(string table_name) {
+            return tables.ContainsKey(table_name);
+        }
+
         IEnumerator IEnumerable.GetEnumerator() {
             return GetEnumerator();
         }
-        public IEnumerator GetEnumerator() {
-            return tables.GetEnumerator();
+
+        public IEnumerator<CachedTable> GetEnumerator() {
+            return tables.Values.GetEnumerator();
         }
     }
 }

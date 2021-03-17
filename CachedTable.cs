@@ -10,6 +10,8 @@ namespace SDF_comparator {
         public CachedDatabase ParentDb { get; private set; }
         public string Name { get; private set; }
         public Dictionary<string, CachedColumn> columns;
+
+
         public CachedTable(CachedDatabase db, string table_name) {
             ParentDb = db;
             Name = table_name;
@@ -17,8 +19,9 @@ namespace SDF_comparator {
             columns = new Dictionary<string, CachedColumn>();
             cache_columns();
         }
+
         private void cache_columns() {
-            var conn = ParentDb.GetConnection();
+            var conn = ParentDb.Connection;
             columns.Clear();
 
             SqlCeCommand cmd = conn.CreateCommand();

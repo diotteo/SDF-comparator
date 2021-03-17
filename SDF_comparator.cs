@@ -33,6 +33,7 @@ namespace SDF_comparator {
 
             return row_dicts;
         }
+
         private static List<Row> prune_full_matches(SqlCeDataReader rdr, List<Dictionary<object, List<Row>>> row_dicts) {
             var dest_rows = new List<Row>();
             object[] raw_row = new object[rdr.FieldCount];
@@ -75,6 +76,7 @@ namespace SDF_comparator {
             }
             return dest_rows;
         }
+
         private static void print_row_diffs(List<RowChange> changes, string[] filepaths) {
             foreach (var change in changes) {
                 string s;
@@ -127,6 +129,7 @@ namespace SDF_comparator {
                 }
             }
         }
+
         private static List<RowChange> build_row_changes(List<Dictionary<object, List<Row>>> row_dicts, List<Row> dest_rows) {
             var changes = new List<RowChange>();
 
@@ -134,6 +137,7 @@ namespace SDF_comparator {
             var unmatched_dst_rows = new List<Row>();
 
             foreach (var dst_row in dest_rows) {
+                //For each row value, gather all rows that match on at least that column value, without duplicates
                 pot_matches.Clear();
                 for (int i = 0; i < row_dicts.Count; i++) {
                     var row_dict = row_dicts[i];
@@ -194,10 +198,11 @@ namespace SDF_comparator {
             }
             return changes;
         }
+
         static void print_table_diffs(DatabaseTuple db_tup) {
             var added_tables = new SortedSet<string>();
             var removed_tables = new SortedSet<string>();
-            foreach (var diff_table_tup in db_tup.diff_tables) {
+            foreach (var diff_table_tup in db_tup.UnmatchedTables) {
                 if (diff_table_tup.Names[1] is null) {
                     removed_tables.Add(diff_table_tup.Names[0]);
                 } else {
@@ -223,10 +228,11 @@ namespace SDF_comparator {
                 }
             }
         }
+
         private static bool print_col_diffs(TableTuple table_tup) {
             var added_cols = new SortedSet<string>();
             var removed_cols = new SortedSet<string>();
-            foreach (var diff_col_tup in table_tup.diff_cols) {
+            foreach (var diff_col_tup in table_tup.UnmatchedCols) {
                 if (diff_col_tup.Names[1] is null) {
                     removed_cols.Add(diff_col_tup.Names[0]);
                 } else {
@@ -253,11 +259,13 @@ namespace SDF_comparator {
             }
             return true;
         }
+
         private static void print_help() {
             //string prgm = System.IO.Path.GetRelativePath(System.IO.Directory.GetCurrentDirectory(), System.Reflection.Assembly.GetExecutingAssembly().Location);
             string prgm = System.Reflection.Assembly.GetExecutingAssembly().Location;
             Utils.WriteLine($"Usage: {prgm} {{path/to/orig.sdf}} {{path/to/dest.sdf}}");
         }
+
         private static void printWithHeader(string s) {
             foreach (var line in header) {
                 Utils.WriteLine(line);
@@ -267,6 +275,7 @@ namespace SDF_comparator {
                 Utils.WriteLine(s);
             }
         }
+
         static int Main(string[] args) {
             string[] filepaths = new string[2];
 
@@ -284,7 +293,7 @@ namespace SDF_comparator {
 
             header.Add($"--- {filepaths[0]}\n+++ {filepaths[1]}\n");
             print_table_diffs(db_tup);
-            foreach (var table_tup in db_tup.table_tuples) {
+            foreach (var table_tup in db_tup.MatchedTables) {
                 header.Add($"\n---- {table_tup.Names[0]}\n++++ {table_tup.Names[1]}");
                 print_col_diffs(table_tup);
 
@@ -294,26 +303,26 @@ namespace SDF_comparator {
                 List<Dictionary<object, List<Row>>> row_dicts = null;
                 List<Row> dest_rows = null;
 
-                table_tup.parent.Orig.GetConnection().Open();
+                table_tup.Parent.Orig.Connection.Open();
                 var orig_table_name = table_tup.Names[0];
-                var orig_table = table_tup.parent.Orig.tables[orig_table_name];
+                var orig_table = table_tup.Parent.Orig[orig_table_name];
 
-                var rdr = get_reader_from_table_and_cols(orig_table, table_tup.col_tuples);
+                var rdr = get_reader_from_table_and_cols(orig_table, table_tup.MatchedCols);
                 row_dicts = build_row_dicts(rdr);
-                table_tup.parent.Orig.GetConnection().Close();
+                table_tup.Parent.Orig.Connection.Close();
 
-                table_tup.parent.Dest.GetConnection().Open();
+                table_tup.Parent.Dest.Connection.Open();
                 var dest_table_name = table_tup.Names[1];
-                var dest_table = table_tup.parent.Dest.tables[dest_table_name];
-                rdr = get_reader_from_table_and_cols(dest_table, table_tup.col_tuples);
+                var dest_table = table_tup.Parent.Dest[dest_table_name];
+                rdr = get_reader_from_table_and_cols(dest_table, table_tup.MatchedCols);
                 dest_rows = prune_full_matches(rdr, row_dicts);
-                table_tup.parent.Dest.GetConnection().Close();
+                table_tup.Parent.Dest.Connection.Close();
 
                 var changes = build_row_changes(row_dicts, dest_rows);
                 header.Add("\n  Rows:");
                 var s = "  ";
                 var prefix = " |";
-                foreach (var col_tup in table_tup.col_tuples) {
+                foreach (var col_tup in table_tup.MatchedCols) {
                     s += $"{prefix} {col_tup.Names[0]}";
                 }
                 s += " |";
@@ -328,7 +337,7 @@ namespace SDF_comparator {
         }
 
         private static SqlCeDataReader get_reader_from_table_and_cols(CachedTable table, List<ColumnTuple> col_tuples) {
-            var conn = table.ParentDb.GetConnection();
+            var conn = table.ParentDb.Connection;
             SqlCeCommand cmd = conn.CreateCommand();
             var s = "SELECT ";
             var prefix = "";

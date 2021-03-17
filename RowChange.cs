@@ -8,10 +8,10 @@ namespace SDF_comparator {
         private Row orig_row;
         private Row dst_row;
         private List<int> row_diff_idxs;
-
         public Row Orig { get { return orig_row; } }
         public Row Dst { get { return dst_row; } }
         public List<int> Diffs { get { return row_diff_idxs; } }
+
 
         public RowChange() : this(null, null) {}
 

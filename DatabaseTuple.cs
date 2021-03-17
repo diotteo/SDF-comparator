@@ -8,18 +8,26 @@ namespace SDF_comparator {
     class DatabaseTuple {
         public CachedDatabase Orig { get; private set; }
         public CachedDatabase Dest { get; private set; }
-        public List<TableTuple> table_tuples;
-        public List<TableTuple> diff_tables;
+
+        //Matches
+        public List<TableTuple> MatchedTables { get; private set; }
+
+        //Diffs (either is null)
+        public List<TableTuple> UnmatchedTables { get; private set; }
+
+
         public DatabaseTuple(CachedDatabase orig, CachedDatabase dest) {
             Orig = orig;
             Dest = dest;
-            table_tuples = new List<TableTuple>();
-            diff_tables = new List<TableTuple>();
+            MatchedTables = new List<TableTuple>();
+            UnmatchedTables = new List<TableTuple>();
 
             if (orig != null && dest != null) {
+                //TODO: lazy eval
                 match_tables();
             }
         }
+
         private void match_tables() {
             /* FIXME: we should do something a bit more sophisticated:
              * start by matching table names, then ensure data types and such haven’t changed
@@ -27,8 +35,9 @@ namespace SDF_comparator {
              */
 
             var table_counts = new Dictionary<string, int>();
-            foreach (var table_keypair in Orig.tables.Union(Dest.tables)) {
-                var name = table_keypair.Key;
+            //FIXME: Pretty sure I want duplicates here, use Concat() instead of Union()?
+            foreach (var table in Orig.Union(Dest)) {
+                var name = table.Name;
                 if (!table_counts.ContainsKey(name)) {
                     table_counts.Add(name, 1);
                 } else {
@@ -43,15 +52,15 @@ namespace SDF_comparator {
                 case 1:
                     string orig_name = null;
                     string dest_name = null;
-                    if (Orig.tables.ContainsKey(name)) {
+                    if (Orig.ContainsKey(name)) {
                         orig_name = name;
                     } else {
                         dest_name = name;
                     }
-                    diff_tables.Add(new TableTuple(this, orig_name, dest_name));
+                    UnmatchedTables.Add(new TableTuple(this, orig_name, dest_name));
                     break;
                 case 2:
-                    table_tuples.Add(new TableTuple(this, name, name));
+                    MatchedTables.Add(new TableTuple(this, name, name));
                     break;
                 default:
                     throw new Exception($"{name} has {count} occurences");

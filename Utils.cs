@@ -16,6 +16,7 @@ namespace SDF_comparator {
             WriteLine(s);
             Console.ResetColor();
         }
+
         public static void WriteLine(string s) {
 #if DEBUG
             Debug.WriteLine(s);
