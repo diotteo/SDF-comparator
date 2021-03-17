@@ -304,17 +304,12 @@ namespace SDF_comparator {
                 List<Row> dest_rows = null;
 
                 table_tup.Parent.Orig.Connection.Open();
-                var orig_table_name = table_tup.Names[0];
-                var orig_table = table_tup.Parent.Orig[orig_table_name];
-
-                var rdr = get_reader_from_table_and_cols(orig_table, table_tup.MatchedCols);
+                var rdr = table_tup.OrigReader;
                 row_dicts = build_row_dicts(rdr);
                 table_tup.Parent.Orig.Connection.Close();
 
                 table_tup.Parent.Dest.Connection.Open();
-                var dest_table_name = table_tup.Names[1];
-                var dest_table = table_tup.Parent.Dest[dest_table_name];
-                rdr = get_reader_from_table_and_cols(dest_table, table_tup.MatchedCols);
+                rdr = table_tup.DestReader;
                 dest_rows = prune_full_matches(rdr, row_dicts);
                 table_tup.Parent.Dest.Connection.Close();
 
@@ -334,22 +329,6 @@ namespace SDF_comparator {
             }
 
             return 0;
-        }
-
-        private static SqlCeDataReader get_reader_from_table_and_cols(CachedTable table, List<ColumnTuple> col_tuples) {
-            var conn = table.ParentDb.Connection;
-            SqlCeCommand cmd = conn.CreateCommand();
-            var s = "SELECT ";
-            var prefix = "";
-
-            //FIXME: should only use Names[0] for orig reader
-            foreach (var col in col_tuples) {
-                s += $"{prefix}[{col.Names[0]}]";
-                prefix = ", ";
-            }
-            s += $" FROM {table.Name};";
-            cmd.CommandText = s;
-            return cmd.ExecuteReader();
         }
     }
 }
