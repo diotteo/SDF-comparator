@@ -7,30 +7,29 @@ using System.Data.SqlServerCe;
 
 namespace SDF_comparator {
     class TableTuple {
-        public List<string> Names { get; private set; }
+        public string OrigName { get; private set; }
+        public string DestName { get; private set; }
+        public List<string> Names => new string[] { OrigName, DestName }.ToList<string>();
         public List<ColumnTuple> MatchedCols { get; private set; }
         public List<ColumnTuple> UnmatchedCols { get; private set; }
         public DatabaseTuple Parent { get; private set; }
-        public SqlCeDataReader OrigReader {
-            get {
-                return get_reader_from_table_and_cols(Parent.Orig[Names[0]], MatchedCols);
-            }
-        }
-        public SqlCeDataReader DestReader {
-            get {
-                return get_reader_from_table_and_cols(Parent.Dest[Names[1]], MatchedCols);
-            }
-        }
+
+        /* TODO: instead of returning readers, we should have an Enumerable interface that spits out rows
+         * Then have another method that gives out a ready-made List<RowChange>
+         * Effectively, we'd be moving build_row_dicts(), prune_full_matches() and build_row_changes() in here
+         */
+        public SqlCeDataReader OrigReader => get_reader_from_table_and_cols(Parent.Orig[OrigName], MatchedCols, true);
+        public SqlCeDataReader DestReader => get_reader_from_table_and_cols(Parent.Dest[DestName], MatchedCols, false);
+        public List<SqlCeDataReader> Readers => new SqlCeDataReader[] { OrigReader, DestReader }.ToList<SqlCeDataReader>();
 
         public TableTuple(DatabaseTuple parent, string orig_table_name, string dest_table_name) {
-            Names = new List<string>();
-            Names.Add(orig_table_name);
-            Names.Add(dest_table_name);
+            OrigName = orig_table_name;
+            DestName = dest_table_name;
             MatchedCols = new List<ColumnTuple>();
             UnmatchedCols = new List<ColumnTuple>();
             this.Parent = parent;
 
-            if (orig_table_name != null && dest_table_name != null) {
+            if (OrigName != null && DestName != null) {
                 match_cols();
             }
         }
@@ -48,8 +47,8 @@ namespace SDF_comparator {
         private void match_cols() {
             var col_counts = new Dictionary<string, ColCount>();
 
-            var orig_col_d = Parent.Orig[Names[0]].columns;
-            var dest_col_d = Parent.Dest[Names[1]].columns;
+            var orig_col_d = Parent.Orig[OrigName].columns;
+            var dest_col_d = Parent.Dest[DestName].columns;
 
             foreach (var col_dict in new Dictionary<string, CachedColumn>[] {
                     orig_col_d,
@@ -88,15 +87,14 @@ namespace SDF_comparator {
             }
         }
 
-        private static SqlCeDataReader get_reader_from_table_and_cols(CachedTable table, List<ColumnTuple> col_tuples) {
+        private static SqlCeDataReader get_reader_from_table_and_cols(CachedTable table, List<ColumnTuple> col_tuples, bool b_is_src) {
             var conn = table.ParentDb.Connection;
             SqlCeCommand cmd = conn.CreateCommand();
             var s = "SELECT ";
             var prefix = "";
 
-            //FIXME: should only use Names[0] for orig reader
             foreach (var col in col_tuples) {
-                s += $"{prefix}[{col.Names[0]}]";
+                s += $"{prefix}[{col.Names[b_is_src ? 0 : 1]}]";
                 prefix = ", ";
             }
             s += $" FROM {table.Name};";
