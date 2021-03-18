@@ -144,6 +144,7 @@ namespace SDF_comparator {
 
         static int Main(string[] args) {
             var b_print_help = false;
+            var b_print_version = false;
             var b_print_cols = false;
             var b_print_rows = false;
             var b_print_tables = false;
@@ -151,6 +152,7 @@ namespace SDF_comparator {
 
             var p = new OptionSet() {
                 {"h|help", "Show this help message and exit", v => b_print_help = v != null},
+                {"v|version", "Print the version and exit", v => b_print_version = v != null},
                 {"c|col", "Print column differences", v => b_print_cols = v != null},
                 {"r|row", "Print each row differences", v => b_print_rows = v != null},
                 {"t|table", "Print table differences", v => b_print_tables = v != null},
@@ -159,6 +161,9 @@ namespace SDF_comparator {
 
             if (b_print_help) {
                 PrintHelp(p);
+                return 0;
+            } else if (b_print_version) {
+                Console.WriteLine($"{PRGM} v{typeof(SDF_comparator).Assembly.GetName().Version}");
                 return 0;
             } else if (filepaths.Count != 2) {
                 Console.WriteLine("Error: 2 files required");
