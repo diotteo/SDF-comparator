@@ -11,7 +11,7 @@ namespace SDF_comparator {
         private static List<string> header = new List<string>();
 
 
-        private static void print_row_diffs(List<RowChange> changes, string[] filepaths) {
+        private static void print_row_diffs(List<RowChange> changes) {
             foreach (var change in changes) {
                 string s;
                 string del_s = null;
@@ -171,7 +171,7 @@ namespace SDF_comparator {
                 }
                 s += " |";
                 header.Add(s);
-                print_row_diffs(changes, filepaths);
+                print_row_diffs(changes);
 
                 //If the header still has data (we did not print anything), don't print the header
                 header.Clear();

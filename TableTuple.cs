@@ -12,14 +12,14 @@ namespace SDF_comparator {
         public List<string> Names => new string[] { OrigName, DestName }.ToList<string>();
         public List<ColumnTuple> MatchedCols { get; private set; }
         public List<ColumnTuple> UnmatchedCols { get; private set; }
-        public DatabaseTuple Parent { get; private set; }
+        public DatabaseTuple DbTuple { get; private set; }
 
         /* TODO: instead of returning readers, we should have an Enumerable interface that spits out rows
          * Then have another method that gives out a ready-made List<RowChange>
          * Effectively, we'd be moving build_row_dicts(), prune_full_matches() and build_row_changes() in here
          */
-        public SqlCeDataReader OrigReader => get_reader_from_table_and_cols(Parent.Orig[OrigName], MatchedCols, true);
-        public SqlCeDataReader DestReader => get_reader_from_table_and_cols(Parent.Dest[DestName], MatchedCols, false);
+        public SqlCeDataReader OrigReader => get_reader_from_table_and_cols(DbTuple.Orig[OrigName], MatchedCols, true);
+        public SqlCeDataReader DestReader => get_reader_from_table_and_cols(DbTuple.Dest[DestName], MatchedCols, false);
         public List<SqlCeDataReader> Readers => new SqlCeDataReader[] { OrigReader, DestReader }.ToList<SqlCeDataReader>();
 
         public TableTuple(DatabaseTuple parent, string orig_table_name, string dest_table_name) {
@@ -27,7 +27,7 @@ namespace SDF_comparator {
             DestName = dest_table_name;
             MatchedCols = new List<ColumnTuple>();
             UnmatchedCols = new List<ColumnTuple>();
-            this.Parent = parent;
+            this.DbTuple = parent;
 
             if (OrigName != null && DestName != null) {
                 match_cols();
@@ -47,8 +47,8 @@ namespace SDF_comparator {
         private void match_cols() {
             var col_counts = new Dictionary<string, ColCount>();
 
-            var orig_col_d = Parent.Orig[OrigName].columns;
-            var dest_col_d = Parent.Dest[DestName].columns;
+            var orig_col_d = DbTuple.Orig[OrigName].columns;
+            var dest_col_d = DbTuple.Dest[DestName].columns;
 
             foreach (var col_dict in new Dictionary<string, CachedColumn>[] {
                     orig_col_d,
@@ -106,13 +106,13 @@ namespace SDF_comparator {
             /* A list of dictionaries each containing a collection of rows with matching column values
              * row_dicts[1][col_val][3] means "get the 4th row whose 2nd column has a value of col_var"
              */
-            Parent.Orig.Connection.Open();
+            DbTuple.Orig.Connection.Open();
             var row_dicts = build_row_dicts(OrigReader);
-            Parent.Orig.Connection.Close();
+            DbTuple.Orig.Connection.Close();
 
-            Parent.Dest.Connection.Open();
+            DbTuple.Dest.Connection.Open();
             var dest_rows = prune_full_matches(DestReader, row_dicts);
-            Parent.Dest.Connection.Close();
+            DbTuple.Dest.Connection.Close();
 
             return build_row_changes(row_dicts, dest_rows);
         }

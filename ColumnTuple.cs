@@ -5,13 +5,16 @@ using System.Text;
 
 namespace SDF_comparator {
     class ColumnTuple {
-        public List<string> Names { get; private set; }
-        private TableTuple table;
+        public string OrigName { get; private set; }
+        public string DestName { get; private set; }
+        public List<string> Names => new string[] { OrigName, DestName }.ToList<string>();
+        public TableTuple TableTuple { get; private set; }
+
+
         public ColumnTuple(TableTuple parent, string orig_name, string dest_name) {
-            Names = new List<string>();
-            Names.Add(orig_name);
-            Names.Add(dest_name);
-            table = parent;
+            OrigName = orig_name;
+            DestName = dest_name;
+            TableTuple = parent;
         }
     }
 }
