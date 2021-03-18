@@ -5,9 +5,11 @@ using System.Text;
 using System.IO;
 using System.Data.SqlServerCe;
 using System.Diagnostics;
+using NDesk.Options;
 
 namespace SDF_comparator {
     class SDF_comparator {
+        private static readonly string PRGM = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
         private static List<string> header = new List<string>();
 
 
@@ -125,12 +127,6 @@ namespace SDF_comparator {
             return true;
         }
 
-        private static void print_help() {
-            //string prgm = System.IO.Path.GetRelativePath(System.IO.Directory.GetCurrentDirectory(), System.Reflection.Assembly.GetExecutingAssembly().Location);
-            string prgm = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            Utils.WriteLine($"Usage: {prgm} {{path/to/orig.sdf}} {{path/to/dest.sdf}}");
-        }
-
         private static void printWithHeader(string s) {
             foreach (var line in header) {
                 Utils.WriteLine(line);
@@ -141,15 +137,43 @@ namespace SDF_comparator {
             }
         }
 
-        static int Main(string[] args) {
-            string[] filepaths = new string[2];
+        private static void PrintHelp(OptionSet opts) {
+            Console.WriteLine($"Usage: {PRGM} [options] {{path/to/file1.sdf}} {{path/to/file2.sdf}}");
+            opts.WriteOptionDescriptions(Console.Out);
+        }
 
-            if (args.Length == 2) {
-                filepaths[0] = args[0];
-                filepaths[1] = args[1];
-            } else {
-                print_help();
+        static int Main(string[] args) {
+            var b_print_help = false;
+            var b_print_cols = false;
+            var b_print_rows = false;
+            var b_print_tables = false;
+            bool b_print_all = false;
+
+            var p = new OptionSet() {
+                {"h|help", "Show this help message and exit", v => b_print_help = v != null},
+                {"c|col", "Print column differences", v => b_print_cols = v != null},
+                {"r|row", "Print each row differences", v => b_print_rows = v != null},
+                {"t|table", "Print table differences", v => b_print_tables = v != null},
+            };
+            var filepaths = p.Parse(args);
+
+            if (b_print_help) {
+                PrintHelp(p);
+                return 0;
+            } else if (filepaths.Count != 2) {
+                Console.WriteLine("Error: 2 files required");
+                PrintHelp(p);
                 return 1;
+            }
+            foreach (var fpath in filepaths) {
+                if (!File.Exists(fpath)) {
+                    Console.WriteLine($"Error: \"{fpath}\" is not a file");
+                    PrintHelp(p);
+                    return 1;
+                }
+            }
+            if (!b_print_tables && !b_print_cols && !b_print_rows) {
+                b_print_all = true;
             }
 
             var db_tup = new DatabaseTuple(
@@ -157,21 +181,29 @@ namespace SDF_comparator {
                     new CachedDatabase(filepaths[1]));
 
             header.Add($"--- {db_tup.Orig.Filepath}\n+++ {db_tup.Dest.Filepath}\n");
-            print_table_diffs(db_tup);
+
+            if (b_print_all || b_print_tables) {
+                print_table_diffs(db_tup);
+            }
             foreach (var table_tup in db_tup.MatchedTables) {
                 header.Add($"\n---- {table_tup.OrigName}\n++++ {table_tup.DestName}");
-                print_col_diffs(table_tup);
 
-                var changes = table_tup.get_row_changes();
-                header.Add("\n  Rows:");
-                var s = "  ";
-                var prefix = " |";
-                foreach (var col_tup in table_tup.MatchedCols) {
-                    s += $"{prefix} {col_tup.Names[0]}";
+                if (b_print_all || b_print_cols) {
+                    print_col_diffs(table_tup);
                 }
-                s += " |";
-                header.Add(s);
-                print_row_diffs(changes);
+
+                if (b_print_all || b_print_rows) {
+                    var changes = table_tup.get_row_changes();
+                    header.Add("\n  Rows:");
+                    var s = "  ";
+                    var prefix = " |";
+                    foreach (var col_tup in table_tup.MatchedCols) {
+                        s += $"{prefix} {col_tup.Names[0]}";
+                    }
+                    s += " |";
+                    header.Add(s);
+                    print_row_diffs(changes);
+                }
 
                 //If the header still has data (we did not print anything), don't print the header
                 header.Clear();
