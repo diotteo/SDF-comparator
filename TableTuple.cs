@@ -191,6 +191,8 @@ namespace SDF_comparator {
             var pot_matches = new HashSet<Row>();
             var unmatched_dst_rows = new List<Row>();
 
+            int nb_rows = row_dicts.Count;
+
             foreach (var dst_row in dest_rows) {
                 //For each row value, gather all rows that match on at least that column value, without duplicates
                 pot_matches.Clear();
@@ -223,7 +225,7 @@ namespace SDF_comparator {
                     var diff_idxs = new List<int>();
 
                     int start_idx = 0;
-                    foreach (var match_idx in best_match_idxs.Union(new int[] { best_match_idxs.Count })) {
+                    foreach (var match_idx in best_match_idxs.Union(new int[] { nb_rows })) {
                         for (int i = start_idx; i < match_idx; i++) {
                             diff_idxs.Add(i);
                         }
