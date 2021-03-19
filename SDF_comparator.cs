@@ -186,7 +186,6 @@ namespace SDF_comparator {
                     new CachedDatabase(filepaths[1]));
 
             header.Add($"--- {db_tup.Orig.Filepath}\n+++ {db_tup.Dest.Filepath}\n");
-
             if (b_print_all || b_print_tables) {
                 print_table_diffs(db_tup);
             }

@@ -1,7 +1,3 @@
-* Make code less ugly
-* This API sucks hard, need to make this actually usable
-* Don't print headers unless there's data to print afterwards
-
 * Argument parser
 	* Add --color argument (default to auto)
 
@@ -9,6 +5,8 @@
 
 * Report on changes in:
 	* metadata
+		* last modified date, etc
+		* autoincrement, field max length, etc
 	* Column types
 	* Column orders
 
