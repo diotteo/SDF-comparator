@@ -195,7 +195,6 @@ namespace SDF_comparator {
             var b_print_rows = false;
             var b_print_tables = false;
             bool b_print_all = false;
-            string color_opt = "auto";
             bool b_do_colors = true;
 
             var p = new OptionSet() {
@@ -204,19 +203,9 @@ namespace SDF_comparator {
                 {"c|col", "Print column differences", v => b_print_cols = v != null},
                 {"r|row", "Print each row differences", v => b_print_rows = v != null},
                 {"t|table", "Print table differences", v => b_print_tables = v != null},
-                {"color", "Enable/disable colored output. Possible values are auto, on and off. Default is auto", v => color_opt = (v is null ? "auto" : v) },
+                {"no-color", "Disable colored output", v => b_do_colors = v != null},
             };
             var filepaths = p.Parse(args);
-            switch (color_opt) {
-            case "on":
-            case "auto":
-                b_do_colors = true;
-                break;
-            default:
-                b_do_colors = false;
-                break;
-            }
-
 
             if (b_print_help) {
                 PrintHelp(p);
