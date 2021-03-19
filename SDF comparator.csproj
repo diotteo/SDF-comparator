@@ -55,12 +55,16 @@
     <Compile Include="CachedDatabase.cs" />
     <Compile Include="CachedTable.cs" />
     <Compile Include="DatabaseTuple.cs" />
+    <Compile Include="DecoratedText\TextBlock.cs" />
+    <Compile Include="DecoratedText\DecoratedTextLine.cs" />
     <Compile Include="Row.cs" />
     <Compile Include="RowChange.cs" />
     <Compile Include="ColumnTuple.cs" />
     <Compile Include="SDF_comparator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TableTuple.cs" />
+    <Compile Include="DecoratedText\IDecoratedTextBlock.cs" />
+    <Compile Include="DecoratedText\DecoratedTextBlock.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>

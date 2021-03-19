@@ -13,7 +13,11 @@ namespace SDF_comparator {
         private static List<string> header = new List<string>();
 
 
-        private static void print_row_diffs(List<RowChange> changes) {
+        private static List<DecoratedTextLine> GetRowDiffLines(List<RowChange> changes, List<DecoratedTextLine> lines = null) {
+            if (lines is null) {
+                lines = new List<DecoratedTextLine>();
+            }
+
             foreach (var change in changes) {
                 string s;
                 string del_s = null;
@@ -53,20 +57,25 @@ namespace SDF_comparator {
                     }
                     s += " |";
                 }
-                printWithHeader(null);
                 if (s != null) {
-                    Utils.WriteLine(s);
+                    lines.Add(new DecoratedTextLine(new TextBlock(s)));
                 }
                 if (del_s != null) {
-                    Utils.WriteDiffLine(del_s, false);
+                    lines.Add(new DecoratedTextLine(new DecoratedTextBlock(del_s).WithDecoration("color", "red")));
                 }
                 if (add_s != null) {
-                    Utils.WriteDiffLine(add_s, true);
+                    lines.Add(new DecoratedTextLine(new DecoratedTextBlock(add_s).WithDecoration("color", "green")));
                 }
             }
+
+            return lines;
         }
 
-        static void print_table_diffs(DatabaseTuple db_tup) {
+        static List<DecoratedTextLine> GetTableDiffLines(DatabaseTuple db_tup, List<DecoratedTextLine> lines = null) {
+            if (lines is null) {
+                lines = new List<DecoratedTextLine>();
+            }
+
             var added_tables = new SortedSet<string>();
             var removed_tables = new SortedSet<string>();
             foreach (var diff_table_tup in db_tup.UnmatchedTables) {
@@ -77,7 +86,6 @@ namespace SDF_comparator {
                 }
             }
 
-            bool b_is_first = true;
             foreach (var tup in new Tuple<SortedSet<string>, bool>[] {
                     new Tuple<SortedSet<string>, bool>(added_tables, true),
                     new Tuple<SortedSet<string>, bool>(removed_tables, false) }) {
@@ -85,18 +93,29 @@ namespace SDF_comparator {
                 var b_is_add = tup.Item2;
                 if (set.Count > 0) {
                     foreach (var table_name in set) {
-                        if (b_is_first) {
-                            b_is_first = false;
-                            printWithHeader($"Tables:");
+                        string prefix;
+                        string color;
+
+                        if (b_is_add) {
+                            prefix = "+ ";
+                            color = "green";
+                        } else {
+                            prefix = "- ";
+                            color = "red";
                         }
-                        var prefix = b_is_add ? "+ " : "- ";
-                        Utils.WriteDiffLine($"{prefix}{table_name}", b_is_add);
+                        lines.Add(new DecoratedTextLine(new DecoratedTextBlock($"{prefix}{table_name}").WithDecoration("color", color)));
                     }
                 }
             }
+
+            return lines;
         }
 
-        private static bool print_col_diffs(TableTuple table_tup) {
+        private static List<DecoratedTextLine> GetColDiffLines(TableTuple table_tup, List<DecoratedTextLine> lines = null) {
+            if (lines is null) {
+                lines = new List<DecoratedTextLine>();
+            }
+
             var added_cols = new SortedSet<string>();
             var removed_cols = new SortedSet<string>();
             foreach (var diff_col_tup in table_tup.UnmatchedCols) {
@@ -107,7 +126,6 @@ namespace SDF_comparator {
                 }
             }
 
-            bool b_is_first = true;
             foreach (var tup in new Tuple<SortedSet<string>, bool>[] {
                         new Tuple<SortedSet<string>, bool>(added_cols, true),
                         new Tuple<SortedSet<string>, bool>(removed_cols, false)}) {
@@ -115,26 +133,54 @@ namespace SDF_comparator {
                 var b_is_add = tup.Item2;
                 if (set.Count > 0) {
                     foreach (var col_name in set) {
-                        if (b_is_first) {
-                            b_is_first = false;
-                            printWithHeader($"  Columns:");
+                        string prefix;
+                        string color;
+                        if (b_is_add) {
+                            prefix = "+   ";
+                            color = "green";
+                        } else {
+                            prefix = "-   ";
+                            color = "red";
                         }
-                        var prefix = b_is_add ? "+   " : "-   ";
-                        Utils.WriteDiffLine($"{prefix}{col_name}", b_is_add);
+                        lines.Add(new DecoratedTextLine(new DecoratedTextBlock($"{prefix}{col_name}").WithDecoration("color", color)));
                     }
                 }
             }
-            return true;
+
+            return lines;
         }
 
-        private static void printWithHeader(string s) {
-            foreach (var line in header) {
-                Utils.WriteLine(line);
+        private static void PrintDecoratedLine(DecoratedTextLine line, bool b_do_colors) {
+            foreach (var block in line) {
+                if (b_do_colors && block.TryGetValue("color", out var color)) {
+                    switch (color) {
+                    case "green":
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        break;
+                    case "red":
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        break;
+                    }
+                }
+                Console.Write(block.Text);
+                if (b_do_colors) {
+                    Console.ResetColor();
+                }
             }
-            header.Clear();
-            if (s != null) {
-                Utils.WriteLine(s);
+            Console.Write("\n");
+        }
+
+        private static void PrintDecoratedLines(List<DecoratedTextLine> lines, bool b_do_colors) {
+            foreach (var line in lines) {
+                PrintDecoratedLine(line, b_do_colors);
             }
+        }
+
+        private static void PrintDecoratedSection(string header, List<DecoratedTextLine> lines, bool b_do_colors) {
+            if (lines.Count > 0) {
+                Console.WriteLine(header);
+            }
+            PrintDecoratedLines(lines, b_do_colors);
         }
 
         private static void PrintHelp(OptionSet opts) {
@@ -149,6 +195,8 @@ namespace SDF_comparator {
             var b_print_rows = false;
             var b_print_tables = false;
             bool b_print_all = false;
+            string color_opt = "auto";
+            bool b_do_colors = true;
 
             var p = new OptionSet() {
                 {"h|help", "Show this help message and exit", v => b_print_help = v != null},
@@ -156,8 +204,19 @@ namespace SDF_comparator {
                 {"c|col", "Print column differences", v => b_print_cols = v != null},
                 {"r|row", "Print each row differences", v => b_print_rows = v != null},
                 {"t|table", "Print table differences", v => b_print_tables = v != null},
+                {"color", "Enable/disable colored output. Possible values are auto, on and off. Default is auto", v => color_opt = (v is null ? "auto" : v) },
             };
             var filepaths = p.Parse(args);
+            switch (color_opt) {
+            case "on":
+            case "auto":
+                b_do_colors = true;
+                break;
+            default:
+                b_do_colors = false;
+                break;
+            }
+
 
             if (b_print_help) {
                 PrintHelp(p);
@@ -185,32 +244,33 @@ namespace SDF_comparator {
                     new CachedDatabase(filepaths[0]),
                     new CachedDatabase(filepaths[1]));
 
-            header.Add($"--- {db_tup.Orig.Filepath}\n+++ {db_tup.Dest.Filepath}\n");
+            string header;
             if (b_print_all || b_print_tables) {
-                print_table_diffs(db_tup);
+                header = $"--- {db_tup.Orig.Filepath}\n+++ {db_tup.Dest.Filepath}\n";
+                var lines = GetTableDiffLines(db_tup);
+                PrintDecoratedSection(header, lines, b_do_colors);
             }
             foreach (var table_tup in db_tup.MatchedTables) {
-                header.Add($"\n---- {table_tup.OrigName}\n++++ {table_tup.DestName}");
+                header = $"\n---- {table_tup.OrigName}\n++++ {table_tup.DestName}";
 
                 if (b_print_all || b_print_cols) {
-                    print_col_diffs(table_tup);
+                    var lines = GetColDiffLines(table_tup);
+                    PrintDecoratedSection(header, lines, b_do_colors);
                 }
 
                 if (b_print_all || b_print_rows) {
                     var changes = table_tup.get_row_changes();
-                    header.Add("\n  Rows:");
+                    header = "\n  Rows:";
                     var s = "  ";
                     var prefix = " |";
                     foreach (var col_tup in table_tup.MatchedCols) {
                         s += $"{prefix} {col_tup.Names[0]}";
                     }
                     s += " |";
-                    header.Add(s);
-                    print_row_diffs(changes);
+                    header += "\n" + s;
+                    var lines = GetRowDiffLines(changes);
+                    PrintDecoratedSection(header, lines, b_do_colors);
                 }
-
-                //If the header still has data (we did not print anything), don't print the header
-                header.Clear();
             }
 
             return 0;
