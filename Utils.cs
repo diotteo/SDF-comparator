@@ -25,4 +25,10 @@ namespace SDF_comparator {
 #endif
         }
     }
+
+    public class ReverseIntComparer : IComparer<int> {
+        int IComparer<int>.Compare(int a, int b) {
+            return b - a;
+        }
+    }
 }

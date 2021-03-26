@@ -122,8 +122,8 @@ namespace SDF_comparator {
             object[] raw_row = new object[rdr.FieldCount];
 
             /* Create the empty dictionaries, even if there is no row in the table,
-                * just so we don't have to deal with that edge case elsewhere
-                */
+             * just so we don't have to deal with that edge case elsewhere
+             */
             for (int i = 0; i < rdr.FieldCount; i++) {
                 row_dicts.Add(new Dictionary<object, List<Row>>());
             }
@@ -142,6 +142,11 @@ namespace SDF_comparator {
             return row_dicts;
         }
 
+
+        /* Each time a row from reader fully matches a row in row_dicts, remove that
+         * row from every row_dicts subdictionary and skip adding it to the returned List.
+         * Every other row is added to the result.
+         */
         private List<Row> prune_full_matches(SqlCeDataReader rdr, List<Dictionary<object, List<Row>>> row_dicts) {
             var dest_rows = new List<Row>();
             object[] raw_row = new object[rdr.FieldCount];
@@ -185,17 +190,33 @@ namespace SDF_comparator {
             return dest_rows;
         }
 
+        class RowMatch {
+            public List<int> Cols { get; private set; }
+            public Row Src { get; private set; }
+            public Row Dst { get; private set; }
+            public int Count => Cols.Count();
+
+            public RowMatch(List<int> col_idxs, Row src, Row dst) {
+                Cols = new List<int>(col_idxs);
+                Src = src;
+                Dst = dst;
+            }
+        }
+
+
+
         private List<RowChange> build_row_changes(List<Dictionary<object, List<Row>>> row_dicts, List<Row> dest_rows) {
             var changes = new List<RowChange>();
 
-            var pot_matches = new HashSet<Row>();
             var unmatched_dst_rows = new List<Row>();
-
+            var pot_unmatched_dst_rows = new Dictionary<Row, bool>();
             int nb_rows = row_dicts.Count;
 
+            //TODO: use an inverse comparer (highest rank first)
+            var ranked_matches = new SortedDictionary<int, List<RowMatch>>(new ReverseIntComparer());
             foreach (var dst_row in dest_rows) {
                 //For each row value, gather all rows that match on at least that column value, without duplicates
-                pot_matches.Clear();
+                var pot_matches = new HashSet<Row>();
                 for (int i = 0; i < row_dicts.Count; i++) {
                     var row_dict = row_dicts[i];
                     if (row_dict.TryGetValue(dst_row[i], out List<Row> idx_rows)) {
@@ -203,8 +224,7 @@ namespace SDF_comparator {
                     }
                 }
 
-                Row best_match = null;
-                List<int> best_match_idxs = null;
+                bool has_match = false;
                 var col_matches = new List<int>();
                 foreach (var pot_match in pot_matches) {
                     col_matches.Clear();
@@ -213,29 +233,64 @@ namespace SDF_comparator {
                             col_matches.Add(i);
                         }
                     }
-                    if (col_matches.Count > 0
-                            && (best_match_idxs is null || best_match_idxs.Count < col_matches.Count)) {
-                        best_match_idxs = new List<int>(col_matches);
-                        best_match = pot_match;
+
+                    int match_count = col_matches.Count;
+                    if (match_count > 0) {
+                        has_match = true;
+
+                        /* We need to keep track of all potentially-matched rows since it's possible
+                         * for a row to be the second-best match for many rows and thus actually be unmatched
+                         * TFW no match dest row PepeHands
+                         */
+                        if (!pot_unmatched_dst_rows.TryGetValue(dst_row, out var b_matched)) {
+                            pot_unmatched_dst_rows.Add(dst_row, false);
+                        }
+
+                        if (!ranked_matches.TryGetValue(match_count, out var list)) {
+                            list = new List<RowMatch>();
+                            ranked_matches.Add(match_count, list);
+                        }
+                        list.Add(new RowMatch(col_matches, pot_match, dst_row));
                     }
                 }
-                if (best_match is null) {
-                    unmatched_dst_rows.Add(dst_row);
-                } else {
-                    var diff_idxs = new List<int>();
 
-                    int start_idx = 0;
-                    foreach (var match_idx in best_match_idxs.Union(new int[] { nb_rows })) {
-                        for (int i = start_idx; i < match_idx; i++) {
-                            diff_idxs.Add(i);
+                //All unmatched dest rows are added (new) rows
+                if (!has_match) {
+                    pot_unmatched_dst_rows.Add(dst_row, false);
+                }
+            }
+
+            /* Cycle through all matches, starting with the best matches (highest rank) first
+             */
+            foreach (var match_keypair in ranked_matches) {
+                int rank = match_keypair.Key;
+                var matches = match_keypair.Value;
+
+                foreach (var match in matches) {
+                    /* A given row may match multiple output rows slightly differently so we first need to
+                     * make sure the row hasn't already matched (in which case it'll have been removed from row_dicts)
+                     */
+                    int first_match_idx = match.Cols[0];
+                    if (!pot_unmatched_dst_rows[match.Dst]
+                            && row_dicts[first_match_idx].ContainsKey(match.Src[first_match_idx])) {
+                        //Go from matching column indexes to difference column indexes
+                        var diff_idxs = new List<int>();
+                        int start_idx = 0;
+                        foreach (var match_idx in match.Cols.Union(new int[] { nb_rows })) {
+                            for (int i = start_idx; i < match_idx; i++) {
+                                diff_idxs.Add(i);
+                            }
+                            start_idx = match_idx + 1;
                         }
-                        start_idx = match_idx + 1;
-                    }
 
-                    changes.Add(new RowChange(best_match, dst_row, diff_idxs));
-                    for (int i = 0; i < row_dicts.Count; i++) {
-                        //use best_match[i] instead of dst_row[i] since we're doing partial matches, so the match is indexed elsewhere in some columns
-                        row_dicts[i][best_match[i]].Remove(best_match);
+                        pot_unmatched_dst_rows[match.Dst] = true;
+
+                        changes.Add(new RowChange(match.Src, match.Dst, diff_idxs));
+
+                        //Remove the src row from every row_dicts subdictionary
+                        for (int i = 0; i < row_dicts.Count; i++) {
+                            row_dicts[i][match.Src[i]].Remove(match.Src);
+                        }
                     }
                 }
             }
@@ -250,7 +305,8 @@ namespace SDF_comparator {
                 }
             }
 
-            foreach (var row in unmatched_dst_rows) {
+            var new_rows = from kp in pot_unmatched_dst_rows where !kp.Value select kp.Key;
+            foreach (var row in new_rows) {
                 changes.Add(new RowChange(null, row));
             }
             return changes;
