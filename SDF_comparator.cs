@@ -10,7 +10,6 @@ using NDesk.Options;
 namespace SDF_comparator {
     class SDF_comparator {
         private static readonly string PRGM = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-        private static List<string> header = new List<string>();
 
 
         private static List<DecoratedTextLine> GetRowDiffLines(List<RowChange> changes, List<DecoratedTextLine> lines = null) {
@@ -176,11 +175,17 @@ namespace SDF_comparator {
             }
         }
 
-        private static void PrintDecoratedSection(string header, List<DecoratedTextLine> lines, bool b_do_colors) {
-            if (lines.Count > 0) {
-                Console.WriteLine(header);
+        private static bool PrintDecoratedSection(List<string> headers, List<DecoratedTextLine> lines, bool b_do_colors) {
+            bool b_print = (lines.Count > 0);
+
+            if (b_print) {
+                foreach (var header in headers) {
+                    Console.WriteLine(header);
+                }
             }
             PrintDecoratedLines(lines, b_do_colors);
+
+            return b_print;
         }
 
         private static void PrintHelp(OptionSet opts) {
@@ -233,32 +238,44 @@ namespace SDF_comparator {
                     new CachedDatabase(filepaths[0]),
                     new CachedDatabase(filepaths[1]));
 
-            string header;
+            var headers = new List<string>() { $"--- {db_tup.Orig.Filepath}\n+++ {db_tup.Dest.Filepath}\n" };
             if (b_print_all || b_print_tables) {
-                header = $"--- {db_tup.Orig.Filepath}\n+++ {db_tup.Dest.Filepath}\n";
                 var lines = GetTableDiffLines(db_tup);
-                PrintDecoratedSection(header, lines, b_do_colors);
+                if (PrintDecoratedSection(headers, lines, b_do_colors)) {
+                    headers.Clear();
+                }
             }
+
+            int header_table_start;
             foreach (var table_tup in db_tup.MatchedTables) {
-                header = $"\n---- {table_tup.OrigName}\n++++ {table_tup.DestName}";
+                header_table_start = headers.Count;
+                headers.Add($"\n---- {table_tup.OrigName}\n++++ {table_tup.DestName}");
 
                 if (b_print_all || b_print_cols) {
                     var lines = GetColDiffLines(table_tup);
-                    PrintDecoratedSection(header, lines, b_do_colors);
+                    if (PrintDecoratedSection(headers, lines, b_do_colors)) {
+                        headers.Clear();
+                    }
                 }
 
                 if (b_print_all || b_print_rows) {
                     var changes = table_tup.get_row_changes();
-                    header = "\n  Rows:";
+                    headers.Add("\n  Rows:");
                     var s = "  ";
                     var prefix = " |";
                     foreach (var col_tup in table_tup.MatchedCols) {
                         s += $"{prefix} {col_tup.Names[0]}";
                     }
                     s += " |";
-                    header += "\n" + s;
+                    headers.Add("\n" + s);
                     var lines = GetRowDiffLines(changes);
-                    PrintDecoratedSection(header, lines, b_do_colors);
+                    if (PrintDecoratedSection(headers, lines, b_do_colors)) {
+                        headers.Clear();
+                    }
+                }
+
+                if (headers.Count > header_table_start) {
+                    headers.RemoveRange(header_table_start, headers.Count - header_table_start);
                 }
             }
 
