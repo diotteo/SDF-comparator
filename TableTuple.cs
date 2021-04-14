@@ -212,7 +212,6 @@ namespace SDF_comparator {
             var pot_unmatched_dst_rows = new Dictionary<Row, bool>();
             int nb_rows = row_dicts.Count;
 
-            //TODO: use an inverse comparer (highest rank first)
             var ranked_matches = new SortedDictionary<int, List<RowMatch>>(new ReverseIntComparer());
             foreach (var dst_row in dest_rows) {
                 //For each row value, gather all rows that match on at least that column value, without duplicates
@@ -224,7 +223,6 @@ namespace SDF_comparator {
                     }
                 }
 
-                bool has_match = false;
                 var col_matches = new List<int>();
                 foreach (var pot_match in pot_matches) {
                     col_matches.Clear();
@@ -235,31 +233,27 @@ namespace SDF_comparator {
                     }
 
                     int match_count = col_matches.Count;
-                    if (match_count > 0) {
-                        has_match = true;
 
-                        /* We need to keep track of all potentially-matched rows since it's possible
-                         * for a row to be the second-best match for many rows and thus actually be unmatched
-                         * TFW no match dest row PepeHands
-                         */
-                        if (!pot_unmatched_dst_rows.TryGetValue(dst_row, out var b_matched)) {
-                            pot_unmatched_dst_rows.Add(dst_row, false);
-                        }
-
-                        if (!ranked_matches.TryGetValue(match_count, out var list)) {
-                            list = new List<RowMatch>();
-                            ranked_matches.Add(match_count, list);
-                        }
-                        list.Add(new RowMatch(col_matches, pot_match, dst_row));
+                    /* We need to keep track of all potentially-matched rows since it's possible
+                     * for a row to be the second-best match for many rows and thus actually be unmatched
+                     * TFW no match dest row PepeHands
+                     */
+                    if (!pot_unmatched_dst_rows.TryGetValue(dst_row, out var b_matched)) {
+                        pot_unmatched_dst_rows.Add(dst_row, true);
                     }
-                }
 
-                //All unmatched dest rows are added (new) rows
-                if (!has_match) {
-                    pot_unmatched_dst_rows.Add(dst_row, false);
+                    if (!ranked_matches.TryGetValue(match_count, out var list)) {
+                        list = new List<RowMatch>();
+                        ranked_matches.Add(match_count, list);
+                    }
+                    list.Add(new RowMatch(col_matches, pot_match, dst_row));
                 }
             }
 
+            /* It’s easier to just mark matched src rows rather than looking for them through row_dicts
+             * (since we need to check if first_match_idx exists and then look for the entry in that list)
+             */
+            var matched_src_rows = new Dictionary<Row, bool>();
             /* Cycle through all matches, starting with the best matches (highest rank) first
              */
             foreach (var match_keypair in ranked_matches) {
@@ -271,8 +265,8 @@ namespace SDF_comparator {
                      * make sure the row hasn't already matched (in which case it'll have been removed from row_dicts)
                      */
                     int first_match_idx = match.Cols[0];
-                    if (!pot_unmatched_dst_rows[match.Dst]
-                            && row_dicts[first_match_idx].ContainsKey(match.Src[first_match_idx])) {
+                    if (pot_unmatched_dst_rows[match.Dst]
+                            && !matched_src_rows.ContainsKey(match.Src)) {
                         //Go from matching column indexes to difference column indexes
                         var diff_idxs = new List<int>();
                         int start_idx = 0;
@@ -283,7 +277,8 @@ namespace SDF_comparator {
                             start_idx = match_idx + 1;
                         }
 
-                        pot_unmatched_dst_rows[match.Dst] = true;
+                        pot_unmatched_dst_rows[match.Dst] = false;
+                        matched_src_rows[match.Src] = true;
 
                         changes.Add(new RowChange(match.Src, match.Dst, diff_idxs));
 
@@ -305,7 +300,7 @@ namespace SDF_comparator {
                 }
             }
 
-            var new_rows = from kp in pot_unmatched_dst_rows where !kp.Value select kp.Key;
+            var new_rows = from kp in pot_unmatched_dst_rows where kp.Value select kp.Key;
             foreach (var row in new_rows) {
                 changes.Add(new RowChange(null, row));
             }
