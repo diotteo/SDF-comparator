@@ -229,6 +229,14 @@ namespace SDF_comparator {
                     }
                 }
 
+                /* We need to keep track of all potentially-matched rows since it's possible
+                 * for a row to be the second-best match for many rows and thus actually be unmatched
+                 * TFW no match dest row PepeHands
+                 */
+                if (!pot_unmatched_dst_rows.TryGetValue(dst_row, out var b_matched)) {
+                    pot_unmatched_dst_rows.Add(dst_row, true);
+                }
+
                 var col_matches = new List<int>();
                 foreach (var pot_match in pot_matches) {
                     col_matches.Clear();
@@ -239,14 +247,6 @@ namespace SDF_comparator {
                     }
 
                     int match_count = col_matches.Count;
-
-                    /* We need to keep track of all potentially-matched rows since it's possible
-                     * for a row to be the second-best match for many rows and thus actually be unmatched
-                     * TFW no match dest row PepeHands
-                     */
-                    if (!pot_unmatched_dst_rows.TryGetValue(dst_row, out var b_matched)) {
-                        pot_unmatched_dst_rows.Add(dst_row, true);
-                    }
 
                     if (!ranked_matches.TryGetValue(match_count, out var list)) {
                         list = new List<RowMatch>();
