@@ -204,7 +204,6 @@ namespace SDF_comparator {
         }
 
 
-
         private List<RowChange> build_row_changes(List<Dictionary<object, List<Row>>> row_dicts, List<Row> dest_rows) {
             var changes = new List<RowChange>();
 
@@ -212,6 +211,13 @@ namespace SDF_comparator {
             var pot_unmatched_dst_rows = new Dictionary<Row, bool>();
             int nb_rows = row_dicts.Count;
 
+            /* TODO: think of a way to rank order partial string matches.
+             * It would be better for AAAAAAAB to match AAAAAAAA rather than CCCCCCCB for example.
+             * Then again, is 2 near-perfect matches better than 1 perfect match + a very poor match?
+             * How do we score row match with multiple partial matches?
+             * Perhaps we only score string fields and get a "partial score" that’s only used to differentiate
+             * candidates within the same rank order?
+             */
             var ranked_matches = new SortedDictionary<int, List<RowMatch>>(new ReverseIntComparer());
             foreach (var dst_row in dest_rows) {
                 //For each row value, gather all rows that match on at least that column value, without duplicates
@@ -251,7 +257,7 @@ namespace SDF_comparator {
             }
 
             /* It’s easier to just mark matched src rows rather than looking for them through row_dicts
-             * (since we need to check if first_match_idx exists and then look for the entry in that list)
+             * (since we need to check if first_match_idx exists and then look for the match.Src in that list)
              */
             var matched_src_rows = new Dictionary<Row, bool>();
             /* Cycle through all matches, starting with the best matches (highest rank) first
