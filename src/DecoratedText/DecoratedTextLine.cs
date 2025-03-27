@@ -5,8 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SDF_comparator {
-    class DecoratedTextLine : IEnumerable<IDecoratedTextBlock> {
+namespace SdfComparator.DecoratedText {
+    public class DecoratedTextLine : IEnumerable<IDecoratedTextBlock> {
         public List<IDecoratedTextBlock> TextBlocks { get; private set; }
 
 

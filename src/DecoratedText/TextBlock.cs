@@ -5,8 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SDF_comparator {
-    class TextBlock : IDecoratedTextBlock {
+namespace SdfComparator.DecoratedText {
+    public class TextBlock : IDecoratedTextBlock {
         public Dictionary<string, string> Decorations { get; private set; }
         public string Text { get; set; }
 

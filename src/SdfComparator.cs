@@ -7,11 +7,8 @@ using System.Data.SqlServerCe;
 using System.Diagnostics;
 using NDesk.Options;
 
-namespace SDF_comparator {
-    class SDF_comparator {
-        private static readonly string PRGM = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
-
+namespace SdfComparator {
+    class SdfComparator {
         private static List<DecoratedTextLine> GetRowDiffLines(List<RowChange> changes, List<DecoratedTextLine> lines = null) {
             if (lines is null) {
                 lines = new List<DecoratedTextLine>();
@@ -194,45 +191,13 @@ namespace SDF_comparator {
         }
 
         static int Main(string[] args) {
-            var b_print_help = false;
-            var b_print_version = false;
-            var b_print_cols = false;
-            var b_print_rows = false;
-            var b_print_tables = false;
-            bool b_print_all = false;
-            bool b_do_colors = true;
+            string PRGM = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            var model = new Model.Model();
+            model.PrgmName = PRGM;
+            model.ParseArgs(args);
 
-            var p = new OptionSet() {
-                {"h|help", "Show this help message and exit", v => b_print_help = v != null},
-                {"v|version", "Print the version and exit", v => b_print_version = v != null},
-                {"c|col", "Print column differences", v => b_print_cols = v != null},
-                {"r|row", "Print each row differences", v => b_print_rows = v != null},
-                {"t|table", "Print table differences", v => b_print_tables = v != null},
-                {"no-color", "Disable colored output", v => b_do_colors = v != null},
-            };
-            var filepaths = p.Parse(args);
-
-            if (b_print_help) {
-                PrintHelp(p);
-                return 0;
-            } else if (b_print_version) {
-                Console.WriteLine($"{PRGM} v{typeof(SDF_comparator).Assembly.GetName().Version}");
-                return 0;
-            } else if (filepaths.Count != 2) {
-                Console.WriteLine("Error: 2 files required");
-                PrintHelp(p);
-                return 1;
-            }
-            foreach (var fpath in filepaths) {
-                if (!File.Exists(fpath)) {
-                    Console.WriteLine($"Error: \"{fpath}\" is not a file");
-                    PrintHelp(p);
-                    return 1;
-                }
-            }
-            if (!b_print_tables && !b_print_cols && !b_print_rows) {
-                b_print_all = true;
-            }
+            var view = new View.ConsoleView(model);
+            var ctlr = new Controller.Controller(model, view);
 
             var db_tup = new DatabaseTuple(
                     new CachedDatabase(filepaths[0]),

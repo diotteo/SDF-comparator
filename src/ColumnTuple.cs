@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace SDF_comparator {
+namespace SdfComparator {
     class ColumnTuple {
         public string OrigName { get; private set; }
         public string DestName { get; private set; }

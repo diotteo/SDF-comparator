@@ -5,7 +5,7 @@ using System.Text;
 
 using System.Data.SqlServerCe;
 
-namespace SDF_comparator {
+namespace SdfComparator {
     class TableTuple {
         public string OrigName { get; private set; }
         public string DestName { get; private set; }

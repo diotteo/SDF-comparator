@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 
-namespace SDF_comparator {
+namespace SdfComparator {
     class Utils {
         public static void WriteDiffLine(string s, bool b_is_add) {
             if (!b_is_add) {

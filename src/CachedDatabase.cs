@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Data.SqlServerCe;
 
-namespace SDF_comparator {
+namespace SdfComparator {
     //FIXME: Expose a full IDictionary interface rather than IEnumerable?
     class CachedDatabase : IEnumerable<CachedTable> {
         public string Filepath { get; private set; }

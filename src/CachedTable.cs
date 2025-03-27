@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Data.SqlServerCe;
 
-namespace SDF_comparator {
+namespace SdfComparator {
     class CachedTable {
         public CachedDatabase ParentDb { get; private set; }
         public string Name { get; private set; }
