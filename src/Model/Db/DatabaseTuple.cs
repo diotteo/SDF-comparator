@@ -4,8 +4,8 @@ using System.Linq;
 using System.Data.SqlServerCe;
 using System.Text;
 
-namespace SdfComparator {
-    class DatabaseTuple {
+namespace SdfComparator.Model.Db {
+    public class DatabaseTuple {
         public CachedDatabase Orig { get; private set; }
         public CachedDatabase Dest { get; private set; }
 

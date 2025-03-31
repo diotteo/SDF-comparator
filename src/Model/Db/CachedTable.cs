@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Data.SqlServerCe;
+using System.Data.Common;
 
-namespace SdfComparator {
-    class CachedTable {
+namespace SdfComparator.Model.Db {
+    public class CachedTable : IDictionary<string, CachedColumn> {
         public CachedDatabase ParentDb { get; private set; }
         public string Name { get; private set; }
         public Dictionary<string, CachedColumn> columns;
@@ -24,7 +25,7 @@ namespace SdfComparator {
             var conn = ParentDb.Connection;
             columns.Clear();
 
-            SqlCeCommand cmd = conn.CreateCommand();
+            DbCommand cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT COLUMN_NAME, DATA_TYPE, ORDINAL_POSITION, CHARACTER_MAXIMUM_LENGTH "
                 + $"FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{Name}';";
             var rdr = cmd.ExecuteReader();

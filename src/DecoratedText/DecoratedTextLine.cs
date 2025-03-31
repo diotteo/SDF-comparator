@@ -9,7 +9,6 @@ namespace SdfComparator.DecoratedText {
     public class DecoratedTextLine : IEnumerable<IDecoratedTextBlock> {
         public List<IDecoratedTextBlock> TextBlocks { get; private set; }
 
-
         public DecoratedTextLine(IDecoratedTextBlock txt) : this() {
             Add(txt);
         }

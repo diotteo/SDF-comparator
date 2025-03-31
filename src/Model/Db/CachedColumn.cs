@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SdfComparator {
+namespace SdfComparator.Model.Db {
     class CachedColumn {
         public string Name { get; private set; }
         public string DataType { get; private set; }

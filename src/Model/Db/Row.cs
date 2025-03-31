@@ -4,7 +4,7 @@ using System.Collections;
 using System.Linq;
 using System.Text;
 
-namespace SdfComparator {
+namespace SdfComparator.Model.Db {
     class Row : IEnumerable {
         private object[] raw;
 

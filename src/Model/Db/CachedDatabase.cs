@@ -4,12 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Data.SqlServerCe;
+using System.Data.Common;
 
-namespace SdfComparator {
+namespace SdfComparator.Model.Db {
     //FIXME: Expose a full IDictionary interface rather than IEnumerable?
-    class CachedDatabase : IEnumerable<CachedTable> {
+    public class CachedDatabase : IEnumerable<CachedTable> {
         public string Filepath { get; private set; }
-        public SqlCeConnection Connection { get; private set; }
+        public DbConnection Connection { get; private set; }
         private Dictionary<string, CachedTable> tables;
 
         public CachedTable this[string table_name] => tables[table_name];
@@ -27,7 +28,7 @@ namespace SdfComparator {
                 tables.Clear();
                 Connection.Open();
 
-                SqlCeCommand cmd = Connection.CreateCommand();
+                DbCommand cmd = Connection.CreateCommand();
                 cmd.CommandText = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'TABLE';";
                 var rdr = cmd.ExecuteReader();
                 while (rdr.Read()) {

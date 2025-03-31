@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 
 using System.Data.SqlServerCe;
+using System.Data.Common;
 
-namespace SdfComparator {
+namespace SdfComparator.Model.Db {
     class TableTuple {
         public string OrigName { get; private set; }
         public string DestName { get; private set; }
@@ -18,9 +19,9 @@ namespace SdfComparator {
          * Then have another method that gives out a ready-made List<RowChange>
          * Effectively, we'd be moving build_row_dicts(), prune_full_matches() and build_row_changes() in here
          */
-        public SqlCeDataReader OrigReader => get_reader_from_table_and_cols(DbTuple.Orig[OrigName], MatchedCols, true);
-        public SqlCeDataReader DestReader => get_reader_from_table_and_cols(DbTuple.Dest[DestName], MatchedCols, false);
-        public List<SqlCeDataReader> Readers => new SqlCeDataReader[] { OrigReader, DestReader }.ToList<SqlCeDataReader>();
+        public DbDataReader OrigReader => get_reader_from_table_and_cols(DbTuple.Orig[OrigName], MatchedCols, true);
+        public DbDataReader DestReader => get_reader_from_table_and_cols(DbTuple.Dest[DestName], MatchedCols, false);
+        public List<DbDataReader> Readers => new DbDataReader[] { OrigReader, DestReader }.ToList<DbDataReader>();
 
         public TableTuple(DatabaseTuple parent, string orig_table_name, string dest_table_name) {
             OrigName = orig_table_name;
@@ -87,9 +88,9 @@ namespace SdfComparator {
             }
         }
 
-        private static SqlCeDataReader get_reader_from_table_and_cols(CachedTable table, List<ColumnTuple> col_tuples, bool b_is_src) {
+        private static DbDataReader get_reader_from_table_and_cols(CachedTable table, List<ColumnTuple> col_tuples, bool b_is_src) {
             var conn = table.ParentDb.Connection;
-            SqlCeCommand cmd = conn.CreateCommand();
+            DbCommand cmd = conn.CreateCommand();
             var s = "SELECT ";
             var prefix = "";
 
@@ -117,7 +118,7 @@ namespace SdfComparator {
             return build_row_changes(row_dicts, dest_rows);
         }
 
-        private List<Dictionary<object, List<Row>>> build_row_dicts(SqlCeDataReader rdr) {
+        private List<Dictionary<object, List<Row>>> build_row_dicts(DbDataReader rdr) {
             var row_dicts = new List<Dictionary<object, List<Row>>>();
             object[] raw_row = new object[rdr.FieldCount];
 
@@ -147,7 +148,7 @@ namespace SdfComparator {
          * row from every row_dicts subdictionary and skip adding it to the returned List.
          * Every other row is added to the result.
          */
-        private List<Row> prune_full_matches(SqlCeDataReader rdr, List<Dictionary<object, List<Row>>> row_dicts) {
+        private List<Row> prune_full_matches(DbDataReader rdr, List<Dictionary<object, List<Row>>> row_dicts) {
             var dest_rows = new List<Row>();
             object[] raw_row = new object[rdr.FieldCount];
             while (rdr.Read()) {
@@ -203,6 +204,11 @@ namespace SdfComparator {
             }
         }
 
+        private class ReverseIntComparer : IComparer<int> {
+            int IComparer<int>.Compare(int a, int b) {
+                return b - a;
+            }
+        }
 
         private List<RowChange> build_row_changes(List<Dictionary<object, List<Row>>> row_dicts, List<Row> dest_rows) {
             var changes = new List<RowChange>();

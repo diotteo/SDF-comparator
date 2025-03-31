@@ -67,21 +67,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="src\CachedColumn.cs" />
-    <Compile Include="src\CachedDatabase.cs" />
-    <Compile Include="src\CachedTable.cs" />
-    <Compile Include="src\DatabaseTuple.cs" />
+    <Compile Include="src\Model\Db\CachedColumn.cs" />
+    <Compile Include="src\Model\Db\CachedDatabase.cs" />
+    <Compile Include="src\Model\Db\CachedTable.cs" />
+    <Compile Include="src\Presenter\Presenter.cs" />
+    <Compile Include="src\Model\Db\DatabaseTuple.cs" />
     <Compile Include="src\DecoratedText\TextBlock.cs" />
     <Compile Include="src\DecoratedText\DecoratedTextLine.cs" />
-    <Compile Include="src\Row.cs" />
-    <Compile Include="src\RowChange.cs" />
-    <Compile Include="src\ColumnTuple.cs" />
+    <Compile Include="src\Model\Settings.cs" />
+    <Compile Include="src\Model\Db\Row.cs" />
+    <Compile Include="src\Model\Db\RowChange.cs" />
+    <Compile Include="src\Model\Db\ColumnTuple.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="src\SdfComparator.cs" />
-    <Compile Include="src\TableTuple.cs" />
+    <Compile Include="src\Model\Db\TableTuple.cs" />
     <Compile Include="src\DecoratedText\IDecoratedTextBlock.cs" />
     <Compile Include="src\DecoratedText\DecoratedTextBlock.cs" />
-    <Compile Include="src\Utils.cs" />
+    <Compile Include="src\View\ConsoleView.cs" />
+    <Compile Include="src\View\IView.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

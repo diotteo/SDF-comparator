@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace SdfComparator {
+namespace SdfComparator.Model.Db {
     class RowChange {
         private Row orig_row;
         private Row dst_row;
