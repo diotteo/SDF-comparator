@@ -10,8 +10,7 @@ using SdfComparator.Model.Db;
 using SdfComparator.DecoratedText;
 
 namespace SdfComparator.Presenter {
-
-    class Presenter {
+    public class Presenter {
         private readonly Model.Settings settings;
         private readonly View.IView view;
 
@@ -28,6 +27,10 @@ namespace SdfComparator.Presenter {
 
         public string GetPrgmName() {
             return settings.PrgmName;
+        }
+
+        public string GetVersion() {
+            return settings.Version;
         }
 
         public string GetHelpText() {

@@ -51,6 +51,9 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Mono.Reflection, Version=1.1.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>packages\Mono.Reflection.Core.1.1.1\lib\net45\Mono.Reflection.dll</HintPath>
+    </Reference>
     <Reference Include="NDesk.Options, Version=1.2.5.0, Culture=neutral, PublicKeyToken=11d31d3c6b89255c, processorArchitecture=MSIL">
       <HintPath>packages\NDesk.Options.Core.1.2.5\lib\net472\NDesk.Options.dll</HintPath>
     </Reference>

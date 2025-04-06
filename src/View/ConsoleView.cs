@@ -9,7 +9,7 @@ using SdfComparator.DecoratedText;
 using SdfComparator.Model.Db;
 
 namespace SdfComparator.View {
-    class ConsoleView: IView {
+    public class ConsoleView: IView {
         public ConsoleView() {
         }
 
