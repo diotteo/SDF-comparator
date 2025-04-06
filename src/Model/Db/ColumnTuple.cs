@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 
 namespace SdfComparator.Model.Db {
-    class ColumnTuple {
+    public class ColumnTuple {
         public string OrigName { get; private set; }
         public string DestName { get; private set; }
         public List<string> Names => new string[] { OrigName, DestName }.ToList<string>();

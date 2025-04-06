@@ -42,21 +42,26 @@ namespace SdfComparator.View {
             Console.Write("\n");
         }
 
-        private void ShowDecoratedLines(Presenter.Presenter pstr, List<DecoratedTextLine> lines) {
+        private void ShowDecoratedLines(
+                Presenter.Presenter pstr,
+                List<DecoratedTextLine> lines) {
             foreach (var line in lines) {
                 ShowDecoratedLine(pstr, line);
             }
         }
 
-        private bool ShowDecoratedSection(List<string> headers, List<DecoratedTextLine> lines) {
+        private bool ShowDecoratedSection(
+                Presenter.Presenter pstr,
+                List<string> headers,
+                List<DecoratedTextLine> lines) {
             bool b_print = (lines.Count > 0);
 
             if (b_print) {
                 foreach (var header in headers) {
-                    ShowMessage(null, header);
+                    ShowMessage(pstr, header);
                 }
             }
-            ShowDecoratedLines(null, lines);
+            ShowDecoratedLines(pstr, lines);
 
             return b_print;
         }
@@ -70,7 +75,7 @@ namespace SdfComparator.View {
 
             if (pstr.DoShowTables()) {
                 var lines = GetTableDiffLines(db_tup);
-                if (ShowDecoratedSection(headers, lines)) {
+                if (ShowDecoratedSection(pstr, headers, lines)) {
                     headers.Clear();
                 }
             }
@@ -78,27 +83,48 @@ namespace SdfComparator.View {
             int header_table_start;
             foreach (var table_tup in db_tup.MatchedTables) {
                 header_table_start = headers.Count;
-                headers.Add($"\n---- {table_tup.OrigName}\n++++ {table_tup.DestName}");
+                headers.AddRange(new string[] {
+                        "",
+                        $"---- {table_tup.OrigName}",
+                        $"++++ {table_tup.DestName}"
+                        });
 
                 if (pstr.DoShowColumns()) {
                     var lines = GetColDiffLines(table_tup);
-                    if (ShowDecoratedSection(headers, lines)) {
+                    if (ShowDecoratedSection(pstr, headers, lines)) {
                         headers.Clear();
                     }
                 }
 
                 if (pstr.DoShowRows()) {
                     var changes = table_tup.GetRowChanges();
-                    headers.Add("\n  Rows:");
+                    headers.AddRange(new string[] {
+                            "",
+                            "  Rows:"
+                            });
                     var s = "  ";
-                    var prefix = " |";
-                    foreach (var col_tup in table_tup.MatchedCols) {
-                        s += $"{prefix} {col_tup.Names[0]}";
+
+                    //Initialize max_len_map to the header name length
+                    var max_len_map = new List<int>();
+                    foreach (var item in table_tup.MatchedCols.Select(
+                            (col_tup, i) => new { i, col_tup }
+                            )) {
+                        max_len_map.Add(item.col_tup.Names.Select(v => v.Length).Max());
+                    }
+                    var lines = GetRowDiffLines(changes, max_len_map);
+                    foreach (var item in table_tup.MatchedCols.Select(
+                            (col_tup, i) => new { i, col_tup }
+                            )) {
+                        var name = item.col_tup.Names[0];
+                        s += $" | {name.PadRight(max_len_map[item.i])}";
                     }
                     s += " |";
-                    headers.Add("\n" + s);
-                    var lines = GetRowDiffLines(changes);
-                    if (ShowDecoratedSection(headers, lines)) {
+                    headers.AddRange(new string[] {
+                            "",
+                            s
+                            });
+
+                    if (ShowDecoratedSection(pstr, headers, lines)) {
                         headers.Clear();
                     }
                 }
@@ -141,7 +167,10 @@ namespace SdfComparator.View {
                             prefix = "- ";
                             color = "red";
                         }
-                        lines.Add(new DecoratedTextLine(new DecoratedTextBlock($"{prefix}{table_name}").WithDecoration("color", color)));
+                        lines.Add(new DecoratedTextLine(
+                                new DecoratedTextBlock($"{prefix}{table_name}")
+                                    .WithDecoration("color", color)
+                                ));
                     }
                 }
             }
@@ -149,10 +178,47 @@ namespace SdfComparator.View {
             return lines;
         }
 
-        //FIXME: Should return a List<List<DecoratedChanges>> and ConsoleView would Join into lines
-        private static List<DecoratedTextLine> GetRowDiffLines(List<RowChange> changes, List<DecoratedTextLine> lines = null) {
+        private static string GetPaddedString(
+                Row r,
+                List<int> max_len_map,
+                char diff_marker
+                ) {
+            var diff_s = $" {diff_marker} | ";
+            var prefix = "";
+            foreach (var (val, i) in ((IEnumerable<object>)r).Select(
+                    (i, value) => (i, value))) {
+                var pad_len = max_len_map[i];
+                diff_s += $"{prefix}{val.ToString().PadRight(pad_len)}";
+                prefix = " | ";
+            }
+            diff_s += " |";
+            return diff_s;
+        }
+
+        private static List<DecoratedTextLine> GetRowDiffLines(
+                List<RowChange> changes,
+                List<int> max_len_map,
+                List<DecoratedTextLine> lines = null
+                ) {
             if (lines is null) {
                 lines = new List<DecoratedTextLine>();
+            }
+
+            //Figure out the length of each col, so every row is aligned
+            foreach (var change in changes) {
+                for (int i = 0; i < changes.Count; i++) {
+                    var orig_len = 0;
+                    var dst_len = 0;
+                    if (!(change.Orig is null)) {
+                        orig_len = change.Orig[i].ToString().Length;
+                    } else if (!(change.Dst is null)) {
+                        dst_len = change.Dst[i].ToString().Length;
+                    }
+                    max_len_map[i] = new int[] {
+                            max_len_map[i],
+                            orig_len,
+                            dst_len }.Max();
+                }
             }
 
             foreach (var change in changes) {
@@ -161,29 +227,37 @@ namespace SdfComparator.View {
                 string add_s = null;
                 if (change.Orig is null) {
                     s = null;
-                    add_s = $" + {change.Dst}";
+                    add_s = GetPaddedString(change.Dst, max_len_map, '+');
                 } else if (change.Dst is null) {
                     s = null;
-                    del_s = $" - {change.Orig}";
+                    del_s = GetPaddedString(change.Orig, max_len_map, '-');
                 } else {
                     int[] cols_pos = new int[change.Orig.Length];
 
-                    int col_idx = 0;
                     s = "   | ";
                     del_s = " -  ";
                     add_s = " +  ";
                     string prefix = "";
+
+                    /*
+                     * from 0 to each diff index, calculate the total substring length of the
+                     * orig line up to that diff, so that we can pad each diff line (added and removed)
+                     * and thus line all 3 of them together.
+                     */
+                    int col_idx = 0;
                     foreach (var idx in change.Diffs.Union(new int[] { change.Orig.Length })) {
                         for (int i = col_idx; i < idx && i < change.Orig.Length; i++) {
                             cols_pos[i] = -1;
-                            s += $"{prefix}{change.Orig[i]}";
+                            var pad_len = max_len_map[i];
+                            s += $"{prefix}{change.Orig[i].ToString().PadRight(pad_len)}";
                             prefix = " | ";
                         }
                         col_idx = idx + 1;
                         if (idx < change.Orig.Length) {
+                            var pad_len = max_len_map[idx];
                             cols_pos[idx] = s.Length;
-                            var orig_s = change.Orig[idx].ToString();
-                            var dst_s = change.Dst[idx].ToString();
+                            var orig_s = change.Orig[idx].ToString().PadRight(pad_len);
+                            var dst_s = change.Dst[idx].ToString().PadRight(pad_len);
 
                             s += prefix;
                             del_s = del_s.PadRight(s.Length, ' ') + orig_s;
@@ -198,10 +272,14 @@ namespace SdfComparator.View {
                     lines.Add(new DecoratedTextLine(new TextBlock(s)));
                 }
                 if (del_s != null) {
-                    lines.Add(new DecoratedTextLine(new DecoratedTextBlock(del_s).WithDecoration("color", "red")));
+                    lines.Add(new DecoratedTextLine(
+                            new DecoratedTextBlock(del_s)
+                            .WithDecoration("color", "red")));
                 }
                 if (add_s != null) {
-                    lines.Add(new DecoratedTextLine(new DecoratedTextBlock(add_s).WithDecoration("color", "green")));
+                    lines.Add(new DecoratedTextLine(
+                            new DecoratedTextBlock(add_s)
+                            .WithDecoration("color", "green")));
                 }
             }
 
@@ -239,7 +317,10 @@ namespace SdfComparator.View {
                             prefix = "-   ";
                             color = "red";
                         }
-                        lines.Add(new DecoratedTextLine(new DecoratedTextBlock($"{prefix}{col_name}").WithDecoration("color", color)));
+                        lines.Add(new DecoratedTextLine(
+                                new DecoratedTextBlock($"{prefix}{col_name}")
+                                .WithDecoration("color", color)
+                                ));
                     }
                 }
             }

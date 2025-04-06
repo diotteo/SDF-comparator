@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 
 namespace SdfComparator.Model.Db {
-    class Row : IEnumerable {
+    public class Row : IEnumerable<object> {
         private readonly object[] raw;
 
 
@@ -17,10 +17,6 @@ namespace SdfComparator.Model.Db {
 
         public object this[int i] { get { return raw[i]; } }
 
-        public IEnumerator GetEnumerator() {
-            return raw.GetEnumerator();
-        }
-
         public override string ToString() {
             string s = "";
             string sep = "";
@@ -29,6 +25,14 @@ namespace SdfComparator.Model.Db {
                 sep = " | ";
             }
             return s;
+        }
+
+        public IEnumerator GetEnumerator() {
+            return raw.GetEnumerator();
+        }
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator() {
+            return ((IEnumerable<object>)raw).GetEnumerator();
         }
     }
 }

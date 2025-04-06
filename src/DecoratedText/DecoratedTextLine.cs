@@ -8,13 +8,18 @@ using System.Threading.Tasks;
 namespace SdfComparator.DecoratedText {
     public class DecoratedTextLine : IEnumerable<IDecoratedTextBlock> {
         public List<IDecoratedTextBlock> TextBlocks { get; private set; }
+        public DecoratedTextLine() {
+            TextBlocks = new List<IDecoratedTextBlock>();
+        }
 
         public DecoratedTextLine(IDecoratedTextBlock txt) : this() {
             Add(txt);
         }
 
-        public DecoratedTextLine() {
-            TextBlocks = new List<IDecoratedTextBlock>();
+        public DecoratedTextLine(IEnumerable<IDecoratedTextBlock> blocks) : this() {
+            foreach (var block in blocks) {
+                TextBlocks.Add(block);
+            }
         }
 
         public void Add(IDecoratedTextBlock txt) {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 
 namespace SdfComparator.Model.Db {
-    class RowChange {
+    public class RowChange {
         private readonly Row orig_row;
         private readonly Row dst_row;
         private readonly List<int> row_diff_idxs;

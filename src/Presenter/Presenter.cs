@@ -101,7 +101,6 @@ namespace SdfComparator.Presenter {
             return settings.ShowAll || settings.ShowRows;
         }
 
-        //FIXME: Most of this should be View-specific
         public void Run() {
             var db_tup = new DatabaseTuple(settings.Filepaths[0], settings.Filepaths[1]);
 
