@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Data.SqlServerCe;
 using System.Data.Common;
 
 namespace SdfComparator.Model.Db {
@@ -17,7 +14,7 @@ namespace SdfComparator.Model.Db {
 
         public CachedDatabase(string filepath) {
             Filepath = filepath;
-            Connection = new SqlCeConnection($"Data Source = {Filepath};");
+            Connection = ConnectionFactory.ConnectionFromFile(Filepath);
             tables = new Dictionary<string, CachedTable>();
 
             cache_tables();

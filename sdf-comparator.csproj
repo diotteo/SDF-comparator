@@ -70,6 +70,7 @@
     <Compile Include="src\Model\Db\CachedColumn.cs" />
     <Compile Include="src\Model\Db\CachedDatabase.cs" />
     <Compile Include="src\Model\Db\CachedTable.cs" />
+    <Compile Include="src\Model\Db\ConnectionFactory.cs" />
     <Compile Include="src\Presenter\Presenter.cs" />
     <Compile Include="src\Model\Db\DatabaseTuple.cs" />
     <Compile Include="src\DecoratedText\TextBlock.cs" />
