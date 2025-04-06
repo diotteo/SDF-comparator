@@ -6,7 +6,7 @@ using System.Text;
 
 namespace SdfComparator.Model.Db {
     class Row : IEnumerable {
-        private object[] raw;
+        private readonly object[] raw;
 
 
         public Row(object[] raw) {

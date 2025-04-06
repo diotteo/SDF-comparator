@@ -9,26 +9,56 @@ namespace SdfComparator.Model.Db {
         public CachedDatabase Orig { get; private set; }
         public CachedDatabase Dest { get; private set; }
 
+        private bool _is_matched;
         //Matches
-        public List<TableTuple> MatchedTables { get; private set; }
+        private List<TableTuple> _matchedTables;
+        public List<TableTuple> MatchedTables {
+            get {
+                MatchIfMissing();
+                return _matchedTables;
+            }
+            private set {
+                _matchedTables = value;
+            }
+        }
 
         //Diffs (either is null)
-        public List<TableTuple> UnmatchedTables { get; private set; }
+        private List<TableTuple> _unmatchedTables;
+        public List<TableTuple> UnmatchedTables {
+            get {
+                MatchIfMissing();
+                return _unmatchedTables;
+            }
+            private set {
+                _unmatchedTables = value;
+            }
+        }
 
-
-        public DatabaseTuple(CachedDatabase orig, CachedDatabase dest) {
+        private void Init(CachedDatabase orig, CachedDatabase dest) {
             Orig = orig;
             Dest = dest;
             MatchedTables = new List<TableTuple>();
             UnmatchedTables = new List<TableTuple>();
+            _is_matched = false;
+        }
 
-            if (orig != null && dest != null) {
-                //TODO: lazy eval
-                match_tables();
+        public DatabaseTuple(CachedDatabase orig, CachedDatabase dest) {
+            Init(orig, dest);
+        }
+
+        public DatabaseTuple(string src_filepath, string dst_filepath) {
+            var orig = new CachedDatabase(src_filepath);
+            var dest = new CachedDatabase(dst_filepath);
+            Init(orig, dest);
+        }
+
+        private void MatchIfMissing() {
+            if (!_is_matched) {
+                MatchTables();
             }
         }
 
-        private void match_tables() {
+        public List<TableTuple> MatchTables() {
             /* FIXME: we should do something a bit more sophisticated:
              * start by matching table names, then ensure data types and such haven’t changed
              * ... then try another matching strategy?
@@ -57,15 +87,18 @@ namespace SdfComparator.Model.Db {
                     } else {
                         dest_name = name;
                     }
-                    UnmatchedTables.Add(new TableTuple(this, orig_name, dest_name));
+                    _unmatchedTables.Add(new TableTuple(this, orig_name, dest_name));
                     break;
                 case 2:
-                    MatchedTables.Add(new TableTuple(this, name, name));
+                    _matchedTables.Add(new TableTuple(this, name, name));
                     break;
                 default:
                     throw new Exception($"{name} has {count} occurences");
                 }
             }
+
+            _is_matched = true;
+            return _matchedTables;
         }
     }
 }

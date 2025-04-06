@@ -10,9 +10,10 @@ using SdfComparator.Model.Db;
 using SdfComparator.DecoratedText;
 
 namespace SdfComparator.Presenter {
+
     class Presenter {
-        private Model.Settings settings;
-        private View.IView view;
+        private readonly Model.Settings settings;
+        private readonly View.IView view;
 
         public Presenter(Model.Settings settings, View.IView view) {
             this.settings = settings;

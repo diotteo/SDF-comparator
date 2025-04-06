@@ -8,7 +8,8 @@ namespace SdfComparator.Model.Db {
     public class CachedDatabase : IEnumerable<CachedTable> {
         public string Filepath { get; private set; }
         public DbConnection Connection { get; private set; }
-        private Dictionary<string, CachedTable> tables;
+        private readonly Dictionary<string, CachedTable> tables;
+        private bool _is_cached;
 
         public CachedTable this[string table_name] => tables[table_name];
 
@@ -17,31 +18,47 @@ namespace SdfComparator.Model.Db {
             Connection = ConnectionFactory.ConnectionFromFile(Filepath);
             tables = new Dictionary<string, CachedTable>();
 
-            cache_tables();
+            _is_cached = false;
         }
 
-        private void cache_tables() {
+        public void CacheTables() {
             try {
                 tables.Clear();
                 Connection.Open();
 
                 DbCommand cmd = Connection.CreateCommand();
-                cmd.CommandText = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'TABLE';";
+                cmd.CommandText =
+                        "SELECT "
+                        + "TABLE_NAME "
+                        + "FROM INFORMATION_SCHEMA.TABLES "
+                        + "WHERE "
+                        + "TABLE_TYPE = 'TABLE';";
                 var rdr = cmd.ExecuteReader();
                 while (rdr.Read()) {
                     var name = (string)rdr.GetValue(0);
-                    tables.Add(name, new CachedTable(this, name));
+                    var ctable = new CachedTable(this, name);
+                    ctable.CacheColumns();
+                    tables.Add(name, ctable);
                 }
+                _is_cached = true;
             } finally {
                 Connection.Close();
             }
         }
 
+        private void CacheIfMissing() {
+            if (!_is_cached) {
+                CacheTables();
+            }
+        }
+
         public bool TryGetValue(string table_name, out CachedTable output) {
+            CacheIfMissing();
             return tables.TryGetValue(table_name, out output);
         }
 
         public bool ContainsKey(string table_name) {
+            CacheIfMissing();
             return tables.ContainsKey(table_name);
         }
 
@@ -50,6 +67,7 @@ namespace SdfComparator.Model.Db {
         }
 
         public IEnumerator<CachedTable> GetEnumerator() {
+            CacheIfMissing();
             return tables.Values.GetEnumerator();
         }
     }

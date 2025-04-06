@@ -8,28 +8,39 @@ namespace SdfComparator.Model.Db {
         public string OrigName { get; private set; }
         public string DestName { get; private set; }
         public List<string> Names => new string[] { OrigName, DestName }.ToList<string>();
-        public List<ColumnTuple> MatchedCols { get; private set; }
-        public List<ColumnTuple> UnmatchedCols { get; private set; }
+
+        private List<ColumnTuple> _matched_cols;
+        public List<ColumnTuple> MatchedCols {
+            get {
+                MatchIfMissing();
+                return _matched_cols;
+            }
+            private set {
+                _matched_cols = value;
+            }
+        }
+        private List<ColumnTuple> _unmatched_cols;
+        public List<ColumnTuple> UnmatchedCols {
+            get {
+                MatchIfMissing();
+                return _unmatched_cols;
+            }
+            private set {
+                _unmatched_cols = value;
+            }
+        }
         public DatabaseTuple DbTuple { get; private set; }
 
-        /* TODO: instead of returning readers, we should have an Enumerable interface that spits out rows
-         * Then have another method that gives out a ready-made List<RowChange>
-         * Effectively, we'd be moving build_row_dicts(), prune_full_matches() and build_row_changes() in here
-         */
-        public DbDataReader OrigReader => get_reader_from_table_and_cols(DbTuple.Orig[OrigName], MatchedCols, true);
-        public DbDataReader DestReader => get_reader_from_table_and_cols(DbTuple.Dest[DestName], MatchedCols, false);
-        public List<DbDataReader> Readers => new DbDataReader[] { OrigReader, DestReader }.ToList<DbDataReader>();
+        private bool _is_matched;
 
         public TableTuple(DatabaseTuple parent, string orig_table_name, string dest_table_name) {
+            _is_matched = false;
             OrigName = orig_table_name;
             DestName = dest_table_name;
+
             MatchedCols = new List<ColumnTuple>();
             UnmatchedCols = new List<ColumnTuple>();
             this.DbTuple = parent;
-
-            if (OrigName != null && DestName != null) {
-                match_cols();
-            }
         }
 
         class ColCount {
@@ -42,13 +53,19 @@ namespace SdfComparator.Model.Db {
             }
         }
 
-        private void match_cols() {
+        private void MatchIfMissing() {
+            if (!_is_matched) {
+                MatchColumns();
+            }
+        }
+
+        public void MatchColumns() {
             var col_counts = new Dictionary<string, ColCount>();
 
-            var orig_col_d = DbTuple.Orig[OrigName].columns;
-            var dest_col_d = DbTuple.Dest[DestName].columns;
+            IDictionary<string, CachedColumn> orig_col_d = DbTuple.Orig[OrigName];
+            IDictionary<string, CachedColumn> dest_col_d = DbTuple.Dest[DestName];
 
-            foreach (var col_dict in new Dictionary<string, CachedColumn>[] {
+            foreach (var col_dict in new IDictionary<string, CachedColumn>[] {
                     orig_col_d,
                     dest_col_d}) {
                 foreach (var table_keypair in col_dict) {
@@ -74,18 +91,20 @@ namespace SdfComparator.Model.Db {
                     } else {
                         dest_name = name;
                     }
-                    UnmatchedCols.Add(new ColumnTuple(this, orig_name, dest_name));
+                    _unmatched_cols.Add(new ColumnTuple(this, orig_name, dest_name));
                     break;
                 case 2:
-                    MatchedCols.Add(new ColumnTuple(this, name, name));
+                    _matched_cols.Add(new ColumnTuple(this, name, name));
                     break;
                 default:
                     throw new Exception($"{name} has {count} occurences");
                 }
             }
+
+            _is_matched = true;
         }
 
-        private static DbDataReader get_reader_from_table_and_cols(CachedTable table, List<ColumnTuple> col_tuples, bool b_is_src) {
+        private static DbDataReader GetReaderFromTableAndCols(CachedTable table, List<ColumnTuple> col_tuples, bool b_is_src) {
             var conn = table.ParentDb.Connection;
             DbCommand cmd = conn.CreateCommand();
             var s = "SELECT ";
@@ -100,22 +119,24 @@ namespace SdfComparator.Model.Db {
             return cmd.ExecuteReader();
         }
 
-        public List<RowChange> get_row_changes() {
+        public List<RowChange> GetRowChanges() {
             /* A list of dictionaries each containing a collection of rows with matching column values
              * row_dicts[1][col_val][3] means "get the 4th row whose 2nd column has a value of col_var"
              */
             DbTuple.Orig.Connection.Open();
-            var row_dicts = build_row_dicts(OrigReader);
+            var orig_reader = GetReaderFromTableAndCols(DbTuple.Orig[OrigName], _matched_cols, true);
+            var row_dicts = BuildRowDicts(orig_reader);
             DbTuple.Orig.Connection.Close();
 
             DbTuple.Dest.Connection.Open();
-            var dest_rows = prune_full_matches(DestReader, row_dicts);
+            var dest_reader = GetReaderFromTableAndCols(DbTuple.Dest[DestName], _matched_cols, false);
+            var dest_rows = PruneFullMatches(dest_reader, row_dicts);
             DbTuple.Dest.Connection.Close();
 
-            return build_row_changes(row_dicts, dest_rows);
+            return BuildRowChanges(row_dicts, dest_rows);
         }
 
-        private List<Dictionary<object, List<Row>>> build_row_dicts(DbDataReader rdr) {
+        private List<Dictionary<object, List<Row>>> BuildRowDicts(DbDataReader rdr) {
             var row_dicts = new List<Dictionary<object, List<Row>>>();
             object[] raw_row = new object[rdr.FieldCount];
 
@@ -145,7 +166,7 @@ namespace SdfComparator.Model.Db {
          * row from every row_dicts subdictionary and skip adding it to the returned List.
          * Every other row is added to the result.
          */
-        private List<Row> prune_full_matches(DbDataReader rdr, List<Dictionary<object, List<Row>>> row_dicts) {
+        private List<Row> PruneFullMatches(DbDataReader rdr, List<Dictionary<object, List<Row>>> row_dicts) {
             var dest_rows = new List<Row>();
             object[] raw_row = new object[rdr.FieldCount];
             while (rdr.Read()) {
@@ -207,7 +228,7 @@ namespace SdfComparator.Model.Db {
             }
         }
 
-        private List<RowChange> build_row_changes(List<Dictionary<object, List<Row>>> row_dicts, List<Row> dest_rows) {
+        private List<RowChange> BuildRowChanges(List<Dictionary<object, List<Row>>> row_dicts, List<Row> dest_rows) {
             var changes = new List<RowChange>();
 
             var unmatched_dst_rows = new List<Row>();

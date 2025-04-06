@@ -5,9 +5,9 @@ using System.Text;
 
 namespace SdfComparator.Model.Db {
     class RowChange {
-        private Row orig_row;
-        private Row dst_row;
-        private List<int> row_diff_idxs;
+        private readonly Row orig_row;
+        private readonly Row dst_row;
+        private readonly List<int> row_diff_idxs;
         public Row Orig { get { return orig_row; } }
         public Row Dst { get { return dst_row; } }
         public List<int> Diffs { get { return row_diff_idxs; } }

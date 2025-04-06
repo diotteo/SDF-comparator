@@ -12,7 +12,8 @@ namespace SdfComparator.Model.Db {
         public int MaxLength { get; private set; }
 
 
-        public CachedColumn(string name, string data_type, int idx) : this(name, data_type, idx, -1) {}
+        public CachedColumn(string name, string data_type, int idx)
+            : this(name, data_type, idx, -1) {}
 
         public CachedColumn(string name, string data_type, int idx, int maxlen) {
             Name = name;
