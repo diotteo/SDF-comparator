@@ -12,6 +12,10 @@ namespace SdfComparator.DecoratedText {
             TextBlocks = new List<IDecoratedTextBlock>();
         }
 
+        public DecoratedTextLine(string txt) : this() {
+            Add(new DecoratedTextBlock(txt));
+        }
+
         public DecoratedTextLine(IDecoratedTextBlock txt) : this() {
             Add(txt);
         }
